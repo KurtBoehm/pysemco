@@ -1,0 +1,659 @@
+diff --git a/packages/pyright-internal/src/analyzer/declarationUtils.ts b/packages/pyright-internal/src/analyzer/declarationUtils.ts
+index 676102a54..0e17fa0c5 100644
+--- a/packages/pyright-internal/src/analyzer/declarationUtils.ts
++++ b/packages/pyright-internal/src/analyzer/declarationUtils.ts
+@@ -414,3 +414,9 @@ export function resolveAliasDeclaration(
+         alreadyVisited.push(curDeclaration);
+     }
+ }
++
++export function isMagicAttributeAccess(declaration: Declaration): boolean {
++    const isMethod = declaration.type === DeclarationType.Function && declaration.isMethod;
++    const name = getNameFromDeclaration(declaration);
++    return isMethod && name ? ['__getattribute__', '__getattr__', '__setattr__', '__delattr__'].includes(name) : false;
++}
+diff --git a/packages/pyright-internal/src/analyzer/typeEvaluator.ts b/packages/pyright-internal/src/analyzer/typeEvaluator.ts
+index a1467b287..12a2f08c1 100644
+--- a/packages/pyright-internal/src/analyzer/typeEvaluator.ts
++++ b/packages/pyright-internal/src/analyzer/typeEvaluator.ts
+@@ -5946,6 +5946,21 @@ export function createTypeEvaluator(
+         selfType?: ClassType | TypeVarType,
+         recursionCount = 0
+     ): ClassMemberLookup | undefined {
++        const getMagicAttributeLookup = (exprNode: ExpressionNode): ClassMemberLookup | undefined => {
++            const generalAttrType = applyAttributeAccessOverride(exprNode, classType, usage, memberName, selfType);
++            return generalAttrType
++                ? {
++                      symbol: undefined,
++                      type: generalAttrType.type,
++                      isTypeIncomplete: false,
++                      isDescriptorError: false,
++                      isClassMember: false,
++                      isClassVar: false,
++                      isAsymmetricAccessor: !!generalAttrType.isAsymmetricAccessor,
++                  }
++                : undefined;
++        };
++
+         const isAccessedThroughObject = TypeBase.isInstance(classType);
+ 
+         // Always look for a member with a declared type first.
+@@ -5962,17 +5977,9 @@ export function createTypeEvaluator(
+             // through an object, see if there's an attribute access override
+             // method ("__getattr__", etc.).
+             if ((flags & MemberAccessFlags.SkipAttributeAccessOverride) === 0 && errorNode) {
+-                const generalAttrType = applyAttributeAccessOverride(errorNode, classType, usage, memberName, selfType);
+-                if (generalAttrType) {
+-                    return {
+-                        symbol: undefined,
+-                        type: generalAttrType.type,
+-                        isTypeIncomplete: false,
+-                        isDescriptorError: false,
+-                        isClassMember: false,
+-                        isClassVar: false,
+-                        isAsymmetricAccessor: !!generalAttrType.isAsymmetricAccessor,
+-                    };
++                const generalAttrLookup = getMagicAttributeLookup(errorNode);
++                if (generalAttrLookup) {
++                    return generalAttrLookup;
+                 }
+             }
+ 
+@@ -21636,10 +21643,11 @@ export function createTypeEvaluator(
+             node.parent.nodeType === ParseNodeType.MemberAccess &&
+             node === node.parent.d.member
+         ) {
+-            let baseType = getType(node.parent.d.leftExpr);
++            const memberAccess = node.parent;
++            let baseType = getType(memberAccess.d.leftExpr);
+             if (baseType) {
+                 baseType = makeTopLevelTypeVarsConcrete(baseType);
+-                const memberName = node.parent.d.member.d.value;
++                const memberName = memberAccess.d.member.d.value;
+                 doForEachSubtype(baseType, (subtype) => {
+                     let symbol: Symbol | undefined;
+ 
+@@ -21677,6 +21685,11 @@ export function createTypeEvaluator(
+                         symbol = ModuleType.getField(subtype, memberName);
+                     }
+ 
++                    if (!symbol) {
++                        // If nothing else has been found, check the magic attribute access methods
++                        symbol = getMagicAttributeAccessSymbol(memberAccess);
++                    }
++
+                     if (symbol) {
+                         // By default, report only the declarations that have type annotations.
+                         // If there are none, then report all of the unannotated declarations,
+@@ -21806,6 +21819,28 @@ export function createTypeEvaluator(
+         return { decls, synthesizedTypes };
+     }
+ 
++    function getMagicAttributeAccessSymbol(node: MemberAccessNode): Symbol | undefined {
++        const baseType = getType(node.d.leftExpr);
++        if (baseType && baseType.category === TypeCategory.Class) {
++            let symbolResult: ClassMember | undefined;
++            if (node.parent && node.parent.nodeType === ParseNodeType.Del) {
++                symbolResult = lookUpClassMember(baseType, '__delattr__', MemberAccessFlags.SkipBaseClasses);
++            } else if (
++                node.parent &&
++                node.parent.nodeType === ParseNodeType.Assignment &&
++                node === node.parent.d.leftExpr
++            ) {
++                symbolResult = lookUpClassMember(baseType, '__setattr__', MemberAccessFlags.SkipBaseClasses);
++            } else {
++                symbolResult =
++                    lookUpClassMember(baseType, '__getattribute__', MemberAccessFlags.SkipBaseClasses) ??
++                    lookUpClassMember(baseType, '__getattr__', MemberAccessFlags.SkipBaseClasses);
++            }
++            return symbolResult?.symbol;
++        }
++        return undefined;
++    }
++
+     function getTypeForDeclaration(declaration: Declaration): DeclaredSymbolTypeInfo {
+         switch (declaration.type) {
+             case DeclarationType.Intrinsic: {
+diff --git a/packages/pyright-internal/src/languageServerBase.ts b/packages/pyright-internal/src/languageServerBase.ts
+index 1de47a412..d25023763 100644
+--- a/packages/pyright-internal/src/languageServerBase.ts
++++ b/packages/pyright-internal/src/languageServerBase.ts
+@@ -57,6 +57,8 @@ import {
+     ReferenceParams,
+     RemoteWindow,
+     RenameParams,
++    SemanticTokensParams,
++    SemanticTokensRequest,
+     SignatureHelp,
+     SignatureHelpParams,
+     SymbolInformation,
+@@ -118,6 +120,7 @@ import { HoverProvider } from './languageService/hoverProvider';
+ import { canNavigateToFile } from './languageService/navigationUtils';
+ import { ReferencesProvider } from './languageService/referencesProvider';
+ import { RenameProvider } from './languageService/renameProvider';
++import { SemanticTokensProvider } from './languageService/semanticTokensProvider';
+ import { SignatureHelpProvider } from './languageService/signatureHelpProvider';
+ import { WorkspaceSymbolProvider } from './languageService/workspaceSymbolProvider';
+ import { Localizer, setLocaleOverride } from './localization/localize';
+@@ -460,6 +463,9 @@ export abstract class LanguageServerBase implements LanguageServerInterface, Dis
+         this.connection.onHover(async (params, token) => this.onHover(params, token));
+ 
+         this.connection.onDocumentHighlight(async (params, token) => this.onDocumentHighlight(params, token));
++        this.connection.onRequest(SemanticTokensRequest.type, async (params, token) =>
++            this.onSemanticTokens(params, token)
++        );
+ 
+         this.connection.onSignatureHelp(async (params, token) => this.onSignatureHelp(params, token));
+ 
+@@ -588,6 +594,16 @@ export abstract class LanguageServerBase implements LanguageServerInterface, Dis
+                     workDoneProgress: true,
+                 },
+                 callHierarchyProvider: true,
++                semanticTokensProvider: {
++                    legend: {
++                        tokenTypes: SemanticTokensProvider.tokenTypes,
++                        tokenModifiers: SemanticTokensProvider.tokenModifiers,
++                    },
++                    range: false,
++                    full: {
++                        delta: false,
++                    },
++                },
+                 workspace: {
+                     workspaceFolders: {
+                         supported: true,
+@@ -812,6 +828,19 @@ export abstract class LanguageServerBase implements LanguageServerInterface, Dis
+         }, token);
+     }
+ 
++    protected async onSemanticTokens(params: SemanticTokensParams, token: CancellationToken) {
++        const uri = this.convertLspUriStringToUri(params.textDocument.uri);
++
++        const workspace = await this.getWorkspaceForFile(uri);
++        if (workspace.disableLanguageServices) {
++            return;
++        }
++
++        return workspace.service.run((program) => {
++            return new SemanticTokensProvider(program, uri, token).getSemanticTokens();
++        }, token);
++    }
++
+     protected async onSignatureHelp(
+         params: SignatureHelpParams,
+         token: CancellationToken
+diff --git a/packages/pyright-internal/src/languageService/hoverProvider.ts b/packages/pyright-internal/src/languageService/hoverProvider.ts
+index d429afa06..6ccaf7a01 100644
+--- a/packages/pyright-internal/src/languageService/hoverProvider.ts
++++ b/packages/pyright-internal/src/languageService/hoverProvider.ts
+@@ -17,12 +17,13 @@ import {
+     VariableDeclaration,
+     isUnresolvedAliasDeclaration,
+ } from '../analyzer/declaration';
++import { isMagicAttributeAccess } from '../analyzer/declarationUtils';
+ import * as ParseTreeUtils from '../analyzer/parseTreeUtils';
+ import { SourceMapper } from '../analyzer/sourceMapper';
+ import { SynthesizedTypeInfo } from '../analyzer/symbol';
+ import { isBuiltInModule } from '../analyzer/typeDocStringUtils';
+ import { PrintTypeOptions, TypeEvaluator } from '../analyzer/typeEvaluatorTypes';
+-import { convertToInstance, doForEachSubtype, isMaybeDescriptorInstance } from '../analyzer/typeUtils';
++import { convertToInstance, doForEachSubtype, isCallableType, isMaybeDescriptorInstance } from '../analyzer/typeUtils';
+ import {
+     ClassType,
+     Type,
+@@ -314,6 +315,13 @@ export class HoverProvider {
+                         let label = 'function';
+                         let isProperty = false;
+ 
++                        if (
++                            node.parent &&
++                            node.parent.nodeType === ParseNodeType.MemberAccess &&
++                            !isCallableType(type)
++                        ) {
++                            label = 'variable';
++                        }
+                         if (isMaybeDescriptorInstance(type, /* requireSetter */ false)) {
+                             isProperty = true;
+                             label = 'property';
+@@ -444,7 +452,8 @@ export class HoverProvider {
+                 if (resolvedDecl.isMethod) {
+                     const declaredType = this._evaluator.getTypeForDeclaration(resolvedDecl)?.type;
+                     isProperty = !!declaredType && isMaybeDescriptorInstance(declaredType, /* requireSetter */ false);
+-                    label = isProperty ? 'property' : 'method';
++                    const isMagic = isMagicAttributeAccess(resolvedDecl);
++                    label = isProperty ? 'property' : isMagic ? 'attribute' : 'method';
+                 }
+ 
+                 let type = this._getType(node);
+diff --git a/packages/pyright-internal/src/languageService/semanticTokensProvider.ts b/packages/pyright-internal/src/languageService/semanticTokensProvider.ts
+new file mode 100644
+index 000000000..f0bea4e7f
+--- /dev/null
++++ b/packages/pyright-internal/src/languageService/semanticTokensProvider.ts
+@@ -0,0 +1,426 @@
++import { Position, SemanticTokensBuilder } from 'vscode-languageserver';
++import { CancellationToken, SemanticTokens } from 'vscode-languageserver-protocol';
++
++import { Declaration, DeclarationType, isUnresolvedAliasDeclaration } from '../analyzer/declaration';
++import { isMagicAttributeAccess } from '../analyzer/declarationUtils';
++import { isDeclInEnumClass } from '../analyzer/enums';
++import { getEnclosingClass } from '../analyzer/parseTreeUtils';
++import { ParseTreeWalker } from '../analyzer/parseTreeWalker';
++import { TypeEvaluator } from '../analyzer/typeEvaluatorTypes';
++import { isCallableType, isMaybeDescriptorInstance } from '../analyzer/typeUtils';
++import {
++    ClassType,
++    FunctionType,
++    TypeCategory,
++    UnknownType,
++    getTypeAliasInfo,
++    isFunction,
++    isModule,
++    isOverloaded,
++    isTypeVar,
++} from '../analyzer/types';
++import { throwIfCancellationRequested } from '../common/cancellationUtils';
++import { assertNever } from '../common/debug';
++import { ProgramView } from '../common/extensibility';
++import { convertOffsetToPosition } from '../common/positionUtils';
++import { TextRange } from '../common/textRange';
++import { Uri } from '../common/uri/uri';
++import { ExpressionNode, FunctionNode, NameNode, ParseNode, ParseNodeType } from '../parser/parseNodes';
++import { ParseFileResults } from '../parser/parser';
++import { limitOverloadBasedOnCall } from './tooltipUtils';
++
++enum TokenType {
++    namespace,
++    type,
++    class,
++    enum,
++    interface,
++    struct,
++    typeParameter,
++    parameter,
++    variable,
++    property,
++    enumMember,
++    event,
++    function,
++    method,
++    macro,
++    keyword,
++    modifier,
++    comment,
++    string,
++    number,
++    regexp,
++    operator,
++    decorator,
++}
++
++enum TokenModifier {
++    declaration,
++    definition,
++    readonly,
++    static,
++    deprecated,
++    abstract,
++    async,
++    modification,
++    documentation,
++    defaultLibrary,
++}
++
++class TokenModifiers {
++    private _repr = 0;
++
++    add(modifier: TokenModifier) {
++        this._repr |= 1 << modifier;
++    }
++
++    repr(): number {
++        return this._repr;
++    }
++}
++
++class SemanticTokensTreeWalker extends ParseTreeWalker {
++    constructor(
++        private _builder: SemanticTokensBuilder,
++        private _parseResults: ParseFileResults,
++        private _evaluator: TypeEvaluator,
++        private _cancellationToken: CancellationToken
++    ) {
++        super();
++    }
++
++    findSemanticTokens() {
++        this.walk(this._parseResults.parserOutput.parseTree);
++    }
++
++    static getPrimaryDeclaration(declarations: Declaration[]) {
++        // In most cases, it's best to treat the first declaration as the
++        // "primary". This works well for properties that have setters
++        // which often have doc strings on the getter but not the setter.
++        // The one case where using the first declaration doesn't work as
++        // well is the case where an import statement within an __init__.py
++        // file uses the form "from .A import A". In this case, if we use
++        // the first declaration, it will show up as a module rather than
++        // the imported symbol type.
++        const primaryDeclaration = declarations[0];
++        if (primaryDeclaration.type === DeclarationType.Alias && declarations.length > 1) {
++            return declarations[1];
++        } else if (
++            primaryDeclaration.type === DeclarationType.Variable &&
++            declarations.length > 1 &&
++            primaryDeclaration.isDefinedBySlots
++        ) {
++            // Slots cannot have docstrings, so pick the secondary.
++            return declarations[1];
++        }
++
++        return primaryDeclaration;
++    }
++
++    override visitName(node: NameNode): boolean {
++        throwIfCancellationRequested(this._cancellationToken);
++
++        // Handle the case where we're pointing to a "fused" keyword argument.
++        // We want to display the hover information for the value expression.
++        if (
++            node.parent?.nodeType === ParseNodeType.Argument &&
++            node.parent.d.isNameSameAsValue &&
++            node.parent.d.name === node &&
++            node.parent.d.valueExpr.nodeType === ParseNodeType.Name
++        ) {
++            node = node.parent.d.valueExpr;
++        }
++
++        const declInfo = this._evaluator.getDeclInfoForNameNode(node);
++        const declarations = declInfo?.decls;
++
++        if (declarations && declarations.length > 0) {
++            const primaryDeclaration = SemanticTokensTreeWalker.getPrimaryDeclaration(declarations);
++            return this._addResultsForDeclaration(primaryDeclaration, node);
++        } else if (!node.parent || node.parent.nodeType !== ParseNodeType.ModuleName) {
++            const type = this._getType(node);
++            let tokenType: TokenType | null = null;
++            if (isModule(type)) {
++                // Handle modules specially because submodules aren't associated with
++                // declarations, but we want them to be presented in the same way as
++                // the top-level module, which does have a declaration.
++                tokenType = TokenType.namespace;
++            } else if (isFunction(type) || isOverloaded(type)) {
++                const isProperty = isMaybeDescriptorInstance(type, /* requireSetter */ false);
++                tokenType = isProperty ? TokenType.property : TokenType.function;
++            } else if (node.parent && node.parent.nodeType === ParseNodeType.MemberAccess) {
++                tokenType = isCallableType(type) ? TokenType.method : TokenType.property;
++            }
++
++            if (tokenType) {
++                const start = convertOffsetToPosition(node.start, this._parseResults.tokenizerOutput.lines);
++                const end = convertOffsetToPosition(TextRange.getEnd(node), this._parseResults.tokenizerOutput.lines);
++                SemanticTokensTreeWalker._push(this._builder, start, end, tokenType, new TokenModifiers());
++            }
++        }
++
++        return false;
++    }
++
++    private _isClassMemberAccess(node: NameNode): boolean {
++        if (node.parent?.nodeType === ParseNodeType.MemberAccess && node === node.parent.d.member) {
++            const leftType = this._evaluator.getType(node.parent.d.leftExpr);
++            if (leftType && this._evaluator.makeTopLevelTypeVarsConcrete(leftType)?.category === TypeCategory.Class) {
++                return true;
++            }
++        }
++        return false;
++    }
++
++    private _getType(node: ExpressionNode) {
++        // It does common work necessary for hover for a type we got
++        // from raw type evaluator.
++        const type = this._evaluator.getType(node) ?? UnknownType.create();
++        return limitOverloadBasedOnCall(this._evaluator, type, node);
++    }
++
++    private _addResultsForDeclaration(declaration: Declaration, node: NameNode): boolean {
++        const start = convertOffsetToPosition(node.start, this._parseResults.tokenizerOutput.lines);
++        const end = convertOffsetToPosition(TextRange.getEnd(node), this._parseResults.tokenizerOutput.lines);
++
++        const resolvedDecl = this._evaluator.resolveAliasDeclaration(declaration, /* resolveLocalNames */ true);
++        if (!resolvedDecl || isUnresolvedAliasDeclaration(resolvedDecl)) {
++            // import
++            return true;
++        }
++
++        let declarationType: TokenType | null = null;
++        const declarationModifiers = new TokenModifiers();
++        switch (resolvedDecl.type) {
++            case DeclarationType.Intrinsic: {
++                switch (resolvedDecl.intrinsicType) {
++                    case 'Any':
++                    case 'str':
++                    case 'str | None':
++                    case 'int':
++                    case 'Iterable[str]':
++                    case 'Dict[str, Any]': {
++                        declarationType = TokenType.variable;
++                        break;
++                    }
++                    case 'type[self]': {
++                        declarationType = TokenType.type;
++                        break;
++                    }
++                }
++                break;
++            }
++
++            case DeclarationType.Variable: {
++                if (resolvedDecl.isConstant || this._evaluator.isFinalVariableDeclaration(resolvedDecl)) {
++                    declarationModifiers.add(TokenModifier.readonly);
++                }
++
++                // If the named node is an aliased import symbol, we can't call
++                // getType on the original name because it's not in the symbol
++                // table. Instead, use the node from the resolved alias.
++                let typeNode: ParseNode = node;
++                if (
++                    declaration.node.nodeType === ParseNodeType.ImportAs ||
++                    declaration.node.nodeType === ParseNodeType.ImportFromAs
++                ) {
++                    if (declaration.node.d.alias && node !== declaration.node.d.alias) {
++                        if (resolvedDecl.node.nodeType === ParseNodeType.Name) {
++                            typeNode = resolvedDecl.node;
++                        }
++                    }
++                } else if (node.parent?.nodeType === ParseNodeType.Argument && node.parent.d.name === node) {
++                    // If this is a named argument, we would normally have received a Parameter declaration
++                    // rather than a variable declaration, but we can get here in the case of a dataclass.
++                    // Replace the typeNode with the node of the variable declaration.
++                    if (declaration.node.nodeType === ParseNodeType.Name) {
++                        typeNode = declaration.node;
++                    }
++                }
++
++                if (declaration.type === DeclarationType.Variable && isDeclInEnumClass(this._evaluator, declaration)) {
++                    declarationType = TokenType.enumMember;
++                    break;
++                }
++
++                // Determine if this identifier is a type alias. If so, expand
++                // the type alias when printing the type information.
++                const type = this._evaluator.getType(typeNode);
++
++                if (type?.props?.typeAliasInfo && typeNode.nodeType === ParseNodeType.Name) {
++                    const typeAliasInfo = getTypeAliasInfo(type);
++                    if (typeAliasInfo?.shared.name === typeNode.d.value) {
++                        if (isTypeVar(type)) {
++                            declarationType = TokenType.typeParameter;
++                        } else {
++                            declarationType = TokenType.type;
++                        }
++                        break;
++                    }
++                }
++
++                if (getEnclosingClass(declaration.node, /*stopAtFunction*/ true) || this._isClassMemberAccess(node)) {
++                    declarationType = TokenType.property;
++                    break;
++                }
++
++                // Handle the case where type is a function and was assigned to a variable.
++                if (type?.category === TypeCategory.Function || type?.category === TypeCategory.Overloaded) {
++                    declarationType = TokenType.function;
++                }
++
++                declarationType = TokenType.variable;
++                break;
++            }
++
++            case DeclarationType.Param: {
++                declarationType = TokenType.parameter;
++                break;
++            }
++
++            case DeclarationType.TypeParam: {
++                declarationType = TokenType.typeParameter;
++                break;
++            }
++
++            case DeclarationType.Class:
++            case DeclarationType.SpecialBuiltInClass: {
++                if (SemanticTokensTreeWalker._isDecorator(node)) {
++                    declarationType = TokenType.decorator;
++                    break;
++                }
++
++                const classNode = node.parent;
++                if (classNode && classNode.nodeType === ParseNodeType.Class) {
++                    const classTypeResult = this._evaluator.getTypeOfClass(classNode);
++                    const classType = classTypeResult?.classType;
++                    if (classType && ClassType.isEnumClass(classType)) {
++                        declarationType = TokenType.enum;
++                        break;
++                    }
++                }
++
++                declarationType = TokenType.class;
++                break;
++            }
++
++            case DeclarationType.Function: {
++                if (SemanticTokensTreeWalker._isDecorator(node)) {
++                    declarationType = TokenType.decorator;
++                    break;
++                }
++
++                SemanticTokensTreeWalker._functionMods(this._evaluator, resolvedDecl.node, declarationModifiers);
++                if (resolvedDecl.isMethod) {
++                    const declaredType = this._evaluator.getTypeForDeclaration(resolvedDecl)?.type;
++                    const isProperty =
++                        !!declaredType && isMaybeDescriptorInstance(declaredType, /* requireSetter */ false);
++                    const isMagic = isMagicAttributeAccess(resolvedDecl);
++                    declarationType = isProperty || isMagic ? TokenType.property : TokenType.method;
++                    break;
++                }
++
++                declarationType = TokenType.function;
++                break;
++            }
++
++            case DeclarationType.Alias: {
++                declarationType = TokenType.namespace;
++                break;
++            }
++
++            case DeclarationType.TypeAlias: {
++                declarationType = TokenType.type;
++                break;
++            }
++
++            default:
++                assertNever(resolvedDecl);
++        }
++
++        if (declarationType !== null) {
++            SemanticTokensTreeWalker._push(this._builder, start, end, declarationType, declarationModifiers);
++        }
++
++        return true;
++    }
++
++    private static _isDecorator(startNode: ParseNode): boolean {
++        let node: ParseNode | undefined = startNode;
++        while (node) {
++            if (node.nodeType === ParseNodeType.Decorator) {
++                return true;
++            }
++            node = node.parent;
++        }
++        return false;
++    }
++
++    private static _functionMods(evaluator: TypeEvaluator, functionNode: FunctionNode, mods: TokenModifiers) {
++        const functionTypeResult = evaluator.getTypeOfFunction(functionNode);
++        if (functionTypeResult) {
++            const functionType = functionTypeResult.functionType;
++            if (FunctionType.isStaticMethod(functionType)) {
++                mods.add(TokenModifier.static);
++            }
++        }
++    }
++
++    private static _push(
++        builder: SemanticTokensBuilder,
++        start: Position,
++        end: Position,
++        declarationType: TokenType,
++        declarationModifiers: TokenModifiers
++    ) {
++        builder.push(
++            start.line,
++            start.character,
++            end.character - start.character,
++            declarationType,
++            declarationModifiers.repr()
++        );
++    }
++}
++
++export class SemanticTokensProvider {
++    static tokenTypes: string[] = Object.values(TokenType).filter(this._filterTypes);
++    static tokenModifiers: string[] = Object.values(TokenModifier).filter(this._fiterMods);
++
++    static tokenTypeIndices = new Map(
++        SemanticTokensProvider.tokenTypes.map((t) => [t, SemanticTokensProvider.tokenTypes.indexOf(t)])
++    );
++    static tokenModifierIndices = new Map(
++        SemanticTokensProvider.tokenModifiers.map((t) => [t, SemanticTokensProvider.tokenModifiers.indexOf(t)])
++    );
++
++    private readonly _parseResults: ParseFileResults | undefined;
++
++    constructor(private _program: ProgramView, private _fileUri: Uri, private _token: CancellationToken) {
++        this._parseResults = this._program.getParseResults(this._fileUri);
++    }
++
++    getSemanticTokens(): SemanticTokens | undefined {
++        throwIfCancellationRequested(this._token);
++        if (!this._parseResults) {
++            return undefined;
++        }
++
++        const evaluator = this._program.evaluator;
++        if (!evaluator) {
++            return undefined;
++        }
++
++        const builder = new SemanticTokensBuilder();
++        new SemanticTokensTreeWalker(builder, this._parseResults, evaluator, this._token).findSemanticTokens();
++        return builder.build();
++    }
++
++    private static _filterTypes(shape: TokenType | string): shape is string {
++        return typeof shape === 'string';
++    }
++    private static _fiterMods(shape: TokenModifier | string): shape is string {
++        return typeof shape === 'string';
++    }
++}

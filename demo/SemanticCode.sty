@@ -1,0 +1,407 @@
+\RequirePackage{l3keys2e}
+\ProvidesExplPackage{demo/SemanticCode}{2024-08-20}{1.1}{Semantic code analysis and typesetting.}
+\RequirePackage{fancyvrb}
+\RequirePackage{xcolor-material}
+
+% Unix time
+
+\tl_new:N\g_unixtime_tl
+\int_new:N\g_unixyear_int
+\int_new:N\g_unixmonth_int
+\int_new:N\g_unixday_int
+\int_new:N\g_unixhour_int
+\int_new:N\g_unixminute_int
+\int_new:N\g_unixsecond_int
+
+\regex_const:Nn\g_unixtime_regex{\A D:(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(?:Z|([+\-](\d+)'(\d+)'))\Z}
+
+% #1: year
+\cs_new:Nn\unixtime_leapyear:n{%
+  \int_eval:n{
+    1
+    -\int_sign:n{\int_mod:nn{#1}{4}}
+    +\int_sign:n{\int_mod:nn{#1}{100}}
+    -\int_sign:n{\int_mod:nn{#1}{400}}
+  }%
+}
+% #1: year
+\cs_new:Nn\unixtime_leapoff:n{%
+  \int_eval:n{
+    \int_div_truncate:nn{#1}{4}
+    - \int_div_truncate:nn{#1}{100}
+    + \int_div_truncate:nn{#1}{400}
+    - \unixtime_leapyear:n{#1}
+    - 477
+  }
+}
+% #1: year, #2: month
+\cs_new:Nn\unixtime_monthoff:nn{%
+  \int_eval:n{
+    30 * (#2 - 1)
+    - \int_sign:n{\int_max:nn{#2 - 2}{0}} * (2 - \unixtime_leapyear:n{#1})
+    + \int_div_truncate:nn{(#2 + \int_sign:n{\int_max:nn{#2 - 8}{0}})}{2}
+  }%
+}
+% #1: year, #2: month, #3: day
+\cs_new:Nn\unixtime_dayoff:nnn{%
+  \int_eval:n{(#1 - 1970) * 365 + \unixtime_leapoff:n{#1} + \unixtime_monthoff:nn{#1}{#2} + (#3 - 1)}%
+}
+% #1: Timestamp as described in the documentation of \file_timestamp:n
+% #2: Destination
+\cs_new:Nn\unixtime_parse:nN{%
+  \regex_extract_once:NnN\g_unixtime_regex{#1}\l_tmpa_seq%
+  \int_set:Nn\g_unixyear_int{\seq_item:Nn\l_tmpa_seq{2}}%
+  \int_set:Nn\g_unixmonth_int{\seq_item:Nn\l_tmpa_seq{3}}%
+  \int_set:Nn\g_unixday_int{\seq_item:Nn\l_tmpa_seq{4}}%
+  \int_set:Nn\g_unixhour_int{\seq_item:Nn\l_tmpa_seq{5}}%
+  \int_set:Nn\g_unixminute_int{\seq_item:Nn\l_tmpa_seq{6}}%
+  \int_set:Nn\g_unixsecond_int{\seq_item:Nn\l_tmpa_seq{7}}%
+  \tl_if_empty:eF{\seq_item:Nn\l_tmpa_seq{8}}{
+    \int_add:Nn\g_unixhour_int{\seq_item:Nn\l_tmpa_seq{9}}%
+    \int_add:Nn\g_unixminute_int{\seq_item:Nn\l_tmpa_seq{10}}%
+  }%
+  \int_set:Nn#2{
+    (
+      (
+        \unixtime_dayoff:nnn{\g_unixyear_int}{\g_unixmonth_int}{\g_unixday_int} * 24
+        + \g_unixhour_int
+      ) * 60 + \g_unixminute_int
+    ) * 60 + \g_unixsecond_int
+  }%
+}
+\cs_generate_variant:Nn\unixtime_parse:nN{VN}
+\cs_new:Nn\unixtime_file_get:nN{%
+  \file_get_timestamp:nN{#1}\g_unixtime_tl%
+  \unixtime_parse:VN\g_unixtime_tl#2%
+}
+\cs_new:Nn\unixtime_job:N{%
+  \unixtime_parse:VN\c_sys_timestamp_str#1%
+}
+\cs_new:Nn\unixtime_file_age:nN{%
+  \unixtime_file_get:nN{#1}\l_tmpa_int%
+  \unixtime_job:N\l_tmpb_int%
+  \int_set:Nn#2{\l_tmpb_int-\l_tmpa_int}%
+}
+
+\cs_new:Nn\semco_quasitt:{\cs_if_exist:NTF\codefamily{\codefamily}{\ttfamily}}
+
+\prop_new:N\g_semco_style_prop
+\prop_new:N\g_semco_styles_prop
+
+\cs_new:Nn\semco_colorful_function:n{\textcolor{GoogleGreen!50!MaterialGreen800}{#1}}
+\cs_new:Nn\semco_colorful_keyword:n{\textcolor{GoogleRed}{#1}}
+\cs_new:Nn\semco_colorful_literal:n{\textcolor{MaterialBlue900}{#1}}
+\cs_new:Nn\semco_colorful_member:n{\textit{#1}}
+\cs_new:Nn\semco_colorful_type:n{\textcolor{MaterialDeepPurple}{#1}}
+\cs_new:Nn\semco_colorful_variable:n{\textcolor{MaterialOrange800}{#1}}
+
+\cs_new:Nn\semco_colorful_attr:n{\textcolor{MaterialBlue700}{#1}}
+\cs_new:Nn\semco_colorful_blt_var:n{\semco_colorful_variable:n{#1}}
+\cs_new:Nn\semco_colorful_cls:n{\semco_colorful_type:n{#1}}
+\cs_new:Nn\semco_colorful_com:n{\textcolor{MaterialGrey600}{#1}}
+\cs_new:Nn\semco_colorful_cnc:n{\textcolor{MaterialIndigo}{#1}}
+\cs_new:Nn\semco_colorful_dec:n{\textcolor{MaterialBlue700}{#1}}
+\cs_new:Nn\semco_colorful_enm:n{\semco_colorful_literal:n{#1}}
+\cs_new:Nn\semco_colorful_enu:n{\semco_colorful_type:n{#1}}
+\cs_new:Nn\semco_colorful_fun:n{\semco_colorful_function:n{#1}}
+\cs_new:Nn\semco_colorful_kwd:n{\semco_colorful_keyword:n{#1}}
+\cs_new:Nn\semco_colorful_kwd_val:n{\semco_colorful_keyword:n{\semco_colorful_literal:n{#1}}}
+\cs_new:Nn\semco_colorful_kwd_fun:n{\semco_colorful_keyword:n{\semco_colorful_function:n{#1}}}
+\cs_new:Nn\semco_colorful_kwd_typ:n{\semco_colorful_keyword:n{\semco_colorful_type:n{#1}}}
+\cs_new:Nn\semco_colorful_lab:n{\textcolor{MaterialBlue700}{#1}}
+\cs_new:Nn\semco_colorful_lit_aff:n{\textcolor{GoogleRed}{#1}}
+\cs_new:Nn\semco_colorful_lit_chr:n{\semco_colorful_literal:n{#1}}
+\cs_new:Nn\semco_colorful_lit_flt:n{\semco_colorful_literal:n{#1}}
+\cs_new:Nn\semco_colorful_lit_inc:n{\semco_colorful_literal:n{#1}}
+\cs_new:Nn\semco_colorful_lit_int:n{\semco_colorful_literal:n{#1}}
+\cs_new:Nn\semco_colorful_lit_str:n{\semco_colorful_literal:n{#1}}
+\cs_new:Nn\semco_colorful_mac:n{\textcolor{MaterialBlue700}{#1}}
+\cs_new:Nn\semco_colorful_mtd:n{\semco_colorful_member:n{\semco_colorful_function:n{#1}}}
+\cs_new:Nn\semco_colorful_nms:n{\textcolor{MaterialPink}{#1}}
+\cs_new:Nn\semco_colorful_par:n{\textbf{\semco_colorful_variable:n{#1}}}
+\cs_new:Nn\semco_colorful_pre:n{\semco_colorful_keyword:n{#1}}
+\cs_new:Nn\semco_colorful_pro:n{\semco_colorful_member:n{\semco_colorful_variable:n{#1}}}
+\cs_new:Nn\semco_colorful_tpa:n{\textbf{\semco_colorful_type:n{#1}}}
+\cs_new:Nn\semco_colorful_typ:n{\semco_colorful_type:n{#1}}
+\cs_new:Nn\semco_colorful_var:n{\semco_colorful_variable:n{#1}}
+
+\cs_new:Nn\semco_bw_mem:n{\textit{#1}}
+\cs_new:Nn\semco_bw_com:n{\textcolor{MaterialGrey600}{#1}}
+\cs_new:Nn\semco_bw_kwd:n{\textbf{#1}}
+
+\cs_new:Nn\semco_style_colorful:{
+  \prop_gset_from_keyval:Nn\g_semco_style_prop{
+    attribute         = {\semco_colorful_attr:n},
+    builtin-variable  = {\semco_colorful_blt_var:n},
+    class             = {\semco_colorful_cls:n},
+    comment           = {\semco_colorful_com:n},
+    concept           = {\semco_colorful_cnc:n},
+    decorator         = {\semco_colorful_dec:n},
+    enum              = {\semco_colorful_enu:n},
+    enumMember        = {\semco_colorful_enm:n},
+    function          = {\semco_colorful_fun:n},
+    keyword           = {\semco_colorful_kwd:n},
+    keyword-fun       = {\semco_colorful_kwd_fun:n},
+    keyword-type      = {\semco_colorful_kwd_typ:n},
+    keyword-value     = {\semco_colorful_kwd_val:n},
+    label             = {\semco_colorful_lab:n},
+    literal-affix     = {\semco_colorful_lit_aff:n},
+    literal-character = {\semco_colorful_lit_chr:n},
+    literal-float     = {\semco_colorful_lit_flt:n},
+    literal-include   = {\semco_colorful_lit_inc:n},
+    literal-int       = {\semco_colorful_lit_int:n},
+    literal-string    = {\semco_colorful_lit_str:n},
+    macro             = {\semco_colorful_mac:n},
+    method            = {\semco_colorful_mtd:n},
+    namespace         = {\semco_colorful_nms:n},
+    parameter         = {\semco_colorful_par:n},
+    preprocessor      = {\semco_colorful_pre:n},
+    property          = {\semco_colorful_pro:n},
+    type              = {\semco_colorful_typ:n},
+    typeParameter     = {\semco_colorful_tpa:n},
+    variable          = {\semco_colorful_var:n},
+  }
+}
+\cs_new:Nn\semco_style_bw:{
+  \prop_gset_from_keyval:Nn\g_semco_style_prop{
+    comment       = {\semco_bw_com:n},
+    keyword       = {\semco_bw_kwd:n},
+    keyword-type  = {\semco_bw_kwd:n},
+    keyword-value = {\semco_bw_kwd:n},
+    method        = {\semco_bw_mem:n},
+    property      = {\semco_bw_mem:n},
+  }
+}
+\prop_gset_from_keyval:Nn\g_semco_styles_prop{
+  bw       = {\semco_style_bw:},
+  colorful = {\semco_style_colorful:},
+}
+
+\semco_style_colorful:{}
+
+\keys_define:nn{semco_keys}{
+  style.code:n = {\prop_item:Nn\g_semco_styles_prop{#1}},
+  style.value_required:n = true,
+}
+\ProcessKeysOptions{semco_keys}
+
+\NewDocumentCommand{\SemCoSetup}{m}{\keys_set:nn{semco_keys}{#1}}
+
+\newlength{\SemCoSpaceLength}
+\NewDocumentEnvironment{SemCoFormatEnv}{}{%
+  \par\noindent\hbadness=10000%
+  \ttfamily%
+  \settowidth{\SemCoSpaceLength}{\ }%
+}{%
+  \par%
+}
+\newlanguage\cpp
+\NewDocumentCommand{\SemCoFormatInlineImpl}{m}{%
+  {%
+    \language=\cpp%
+    \semco_quasitt:%
+    \settowidth{\SemCoSpaceLength}{\ }%
+    #1%
+  }%
+}
+\NewDocumentCommand{\SemCoFormatInline}{m}{%
+  \if_mode_math:%
+    \text{\SemCoFormatInlineImpl{#1}}%
+  \else:%
+    \SemCoFormatInlineImpl{#1}%
+  \fi:%
+}
+\NewDocumentCommand{\SemCoSpace}{}{\hspace*{\SemCoSpaceLength}}%
+\NewDocumentCommand{\SemCoBackSlash}{}{\textbackslash}
+\NewDocumentCommand{\SemCoFormat}{m m}{%
+  \prop_get:NnNTF\g_semco_style_prop{#1}\l_tmpa_tl{\l_tmpa_tl{#2}}{#2}%
+}
+
+\int_new:N\g_semco_tmp_cntr
+\tl_new:N\g_semco_file_name
+\tl_new:N\g_semco_output_dir
+\tl_new:N\g_semco_vrb_path
+\tl_new:N\g_semco_key_tl
+\tl_new:N\g_semco_vrb_content
+\prop_new:N\g_semco_part_prop
+\prop_new:N\g_semco_mini_prop
+
+\cs_new:Nn\semco_tmp_name:{.semco/tmp-\int_use:N\g_semco_tmp_cntr.tex}
+\cs_new:Nn\semco_vrb_name:{vrb.tmp}
+
+\cs_generate_variant:Nn\str_replace_all:Nnn{Nnx}
+
+% #1: Destination, #2: Source
+\cs_new:Nn\semco_tl_to_str:NN{%
+  \str_set:NV#1#2%
+  \str_replace_all:Nnx#1{##}{\c_hash_str}%
+}
+\cs_new:Nn\semco_tl_to_str:Nn{%
+  \str_set:Nn#1{#2}%
+  \str_replace_all:Nnx#1{##}{\c_hash_str}%
+}
+
+\NewDocumentCommand{\@semco@store@part@cache}{o m m m}{%
+  \semco_tl_to_str:Nn\l_tmpa_str{#2}%
+  \sys_shell_now:e{echo ~ '\string\@semco@store@part@cache\IfValueT{#1}{{#1}}{\l_tmpa_str}{#3}{\semco_tmp_name:}' ~ >> ~ .semco/.cache.tmp}%
+  \prop_gput:Nee\g_semco_part_prop{{#1}{\l_tmpa_str}{#3}}{\semco_tmp_name:}%
+  \str_if_eq:eeF{#4}{\semco_tmp_name:}{\sys_shell_now:e{mv ~ "#4" ~ \semco_tmp_name:}}%
+  \int_gincr:N\g_semco_tmp_cntr%
+}
+\NewDocumentCommand{\@semco@store@mini@cache}{m m m}{%
+  \semco_tl_to_str:Nn\l_tmpa_str{#2}%
+  \sys_shell_now:e{echo ~ '\string\@semco@store@mini@cache{#1}{\l_tmpa_str}{\semco_tmp_name:}' ~ >> ~ .semco/.cache.tmp}%
+  \prop_gput:Nee\g_semco_mini_prop{{#1}{\l_tmpa_str}}{\semco_tmp_name:}%
+  \str_if_eq:eeF{#3}{\semco_tmp_name:}{\sys_shell_now:e{mv ~ "#3" ~ \semco_tmp_name:}}%
+  \int_gincr:N\g_semco_tmp_cntr%
+}
+
+\sys_shell_now:n{mkdir ~ -p ~ .semco}
+
+% Initialize/update if pysemco_tex does not exist or is more than 24 hours old
+\cs_new:Nn\semco_venv_init:{
+  \sys_shell_now:n{rm ~ -rf ~ .semco/* ~ .semco/.cache}
+  \sys_shell_now:n{python3 ~ -m ~ venv ~ .semco/venv}
+  \sys_shell_now:n{./.semco/venv/bin/pip3 ~ install ~ .}
+}
+\file_if_exist:nTF{.semco/venv/bin/pysemco_tex}{
+  \int_new:N\g_semco_age_int
+  \unixtime_file_age:nN{.semco/venv/bin/pysemco_tex}\g_semco_age_int
+  \tl_log:e{pysemco_tex~age:~\int_use:N\g_semco_age_int}
+  \int_compare:nT{\g_semco_age_int > 86400}{\semco_venv_init:}
+}{\semco_venv_init:}
+
+\sys_shell_now:n{echo ~ "*" ~ > ~ .semco/.gitignore}
+\sys_shell_now:n{touch ~ .semco/.cache ~ .semco/.cache.tmp}
+
+\ExplSyntaxOff
+\input{.semco/.cache}
+\ExplSyntaxOn
+
+\sys_shell_now:n{mv ~ -f ~ .semco/.cache.tmp ~ .semco/.cache}
+
+% #1: language
+% #2: code name to refer to later
+% #3: root
+% #4: file name relative to root
+\NewDocumentCommand{\SemCoAnalyze}{m m m m}{%
+  \sys_shell_now:n{.semco/venv/bin/pysemco_tex ~ analyze ~ --clear-cache ~ #1 ~ "#3" ~ "#3/#4" ~ ".semco/#2.json"}%
+}
+
+% #1: code name
+\NewDocumentCommand{\SemCoInput}{O{} m}{%
+  \sys_shell_now:n{.semco/venv/bin/pysemco_tex ~ texify ~ "#1" ~ ".semco/#2.json" ~ ".semco/#2.tex"}%
+  \begin{SemCoFormatEnv}\input{.semco/#2.tex}\end{SemCoFormatEnv}%
+}
+
+\cs_new:Nn\semco_input_part_work:nnnn{%
+  \sys_shell_now:e{.semco/venv/bin/pysemco_tex ~ texify_partial ~ \IfValueT{#1}{--index ~ #1} ~ ".semco/#2.json" ~ "#3" ~ #4}%
+  \prop_gput:Nxx\g_semco_part_prop{{#1}{#2}{#3}}{#4}%
+  \input{#4}%
+  \sys_shell_now:e{echo ~ '\string\@semco@store@part@cache\IfValueT{#1}{{#1}}{#2}{#3}{#4}' ~ >> ~ .semco/.cache}%
+  \int_gincr:N\g_semco_tmp_cntr%
+}
+% #1: index of occurrence
+% #2: code name
+% #3: part
+\NewDocumentCommand{\SemCoInputPart}{o m m}{%
+  \SemCoFormatInline{%
+    \prop_get:NxNTF\g_semco_part_prop{{#1}{#2}{#3}}\g_semco_file_name{%
+      % if in cache: read existing file if it exists, recompute otherwise
+      \file_if_exist:nTF{\tl_use:N\g_semco_file_name}{%
+        \input{\tl_use:N\g_semco_file_name}%
+      }{%
+        \semco_input_part_work:nnnn{#1}{#2}{#3}{\tl_use:N\g_semco_file_name}%
+      }%
+    }{%
+      % compute
+      \semco_input_part_work:nnnn{#1}{#2}{#3}{\semco_tmp_name:}%
+    }%
+  }%
+}
+
+\cs_new:Nn\semco_input_mini_work:nnn{%
+  \sys_shell_now:e{.semco/venv/bin/pysemco_tex ~ texify_minimal ~ #1 ~ "#2" ~ #3}%
+  \prop_gput:Nxx\g_semco_mini_prop{{#1}{#2}}{#3}%
+  \input{#3}%
+  \sys_shell_now:e{echo ~ '\string\@semco@store@mini@cache{#1}{#2}{#3}' ~ >> ~ .semco/.cache}%
+  \int_gincr:N\g_semco_tmp_cntr%
+}
+% #1: language
+% #2: code
+\NewDocumentCommand{\SemCoMini}{m m}{%
+  \SemCoFormatInline{%
+    \prop_get:NxNTF\g_semco_mini_prop{{#1}{#2}}\g_semco_file_name{%
+      % if in cache: read existing file if it exists, recompute otherwise
+      \IfFileExists{\tl_use:N\g_semco_file_name}{%
+        \input{\tl_use:N\g_semco_file_name}%
+      }{%
+        \semco_input_mini_work:nnn{#1}{#2}{\tl_use:N\g_semco_file_name}%
+      }%
+    }{%
+      % compute
+      \semco_input_mini_work:nnn{#1}{#2}{\semco_tmp_name:}%
+    }%
+  }%
+}
+
+% Based on https://tex.stackexchange.com/a/62032
+\NewDocumentCommand{\GetEnv}{om}{%
+  \sys_get_shell:nnN{kpsewhich ~ --var-value ~ #2}{}\l_tmpa_tl%
+  \tl_trim_spaces:N\l_tmpa_tl%
+  \tl_if_empty:NTF\l_tmpa_tl{\tl_set:Nn\l_tmpa_tl{.}}{%
+    \tl_if_eq:NnT\l_tmpa_tl{\par}{\tl_set:Nn\l_tmpa_tl{.}}%
+  }%
+  \IfNoValueTF{#1}{%
+    \tl_use:N \l_tmpa_tl%
+  }{%
+    \tl_set_eq:NN #1\l_tmpa_tl%
+  }%
+}
+\NewDocumentCommand{\GetOutputDir}{o}{%
+  \GetEnv[#1]{TEXMF_OUTPUT_DIRECTORY}%
+}
+
+\cs_new:Nn\semco_mini_file_work:nnn{%
+  \sys_shell_now:e{.semco/venv/bin/pysemco_tex ~ texify_minimal_file ~ #1 ~ "#2" ~ #3}%
+  \prop_gput:Nxx\g_semco_mini_prop{{#1}{\g_semco_key_tl}}{#3}%
+  \input{#3}%
+  \sys_shell_now:e{echo ~ '\string\@semco@store@mini@cache{#1}{\g_semco_key_tl}{#3}' ~ >> ~ .semco/.cache}%
+  \int_gincr:N\g_semco_tmp_cntr%
+}
+% #1: language
+\NewDocumentEnvironment{SemCoMiniEnv}{m}{%
+  \VerbatimOut{\semco_vrb_name:}%
+}{%
+  \endVerbatimOut%
+  \GetOutputDir[\g_semco_output_dir]%
+  \tl_set:Nn\g_semco_vrb_path{\g_semco_output_dir/\semco_vrb_name:}%
+  \file_get:nnN{\g_semco_vrb_path}{}\g_semco_vrb_content%
+  \semco_tl_to_str:NN\g_semco_key_tl\g_semco_vrb_content%
+  \begin{SemCoFormatEnv}%
+    \prop_get:NxNTF\g_semco_mini_prop{{#1}{\g_semco_key_tl}}\g_semco_file_name{%
+      % if in cache: read existing file if it exists, recompute otherwise
+      \IfFileExists{\tl_use:N\g_semco_file_name}{%
+        \input{\tl_use:N\g_semco_file_name}%
+      }{%
+        \semco_mini_file_work:nnn{#1}{\g_semco_vrb_path}{\tl_use:N\g_semco_file_name}%
+      }%
+    }{%
+      % compute
+      \semco_mini_file_work:nnn{#1}{\g_semco_vrb_path}{\semco_tmp_name:}%
+    }%
+  \end{SemCoFormatEnv}%
+}
+
+% #1: language
+% #2: code name to refer to later
+\NewDocumentEnvironment{SemCoAnalyzeEnv}{m m}{%
+  \VerbatimOut{\semco_vrb_name:}%
+}{%
+  \endVerbatimOut%
+  \GetOutputDir[\g_semco_output_dir]%
+  \tl_set:Nn\g_semco_vrb_path{\g_semco_output_dir/\semco_vrb_name:}%
+  \tl_set:Nn\g_semco_file_name{.semco/#2}%
+  \sys_shell_now:e{mv ~ -f ~ "\g_semco_vrb_path" ~ "\g_semco_file_name"}%
+  \SemCoAnalyze{#1}{#2}{.semco}{#2}%
+}

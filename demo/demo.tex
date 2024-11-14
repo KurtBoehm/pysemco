@@ -1,0 +1,54 @@
+\documentclass{article}
+\usepackage{expl3}
+\usepackage[a4paper,margin=2cm]{geometry}
+
+\usepackage{iftex}
+\ifTUTeX\else\usepackage[T1]{fontenc}\fi
+
+\usepackage{demo/SemanticCode}
+
+\SemCoAnalyze{cpp}{demo}{.}{demo/demo.cpp}
+\SemCoAnalyze{nasm}{asmdemo}{.}{demo/demo.asm}
+\SemCoAnalyze{python}{pydemo}{.}{demo/demo.py}
+
+\ExplSyntaxOn
+\def\TimeTest{%
+  \unixtime_parse:nN{D:20241113204743Z}\g_tmpa_int%
+  \unixtime_parse:nN{D:20241113204743+01'00'}\g_tmpb_int%
+  1731530863---\int_use:N\g_tmpa_int,~1731534463---\int_use:N\g_tmpb_int%
+}
+\ExplSyntaxOff
+
+\begin{document}
+\TimeTest{}
+
+C++:
+\SemCoInput{demo}\SemCoSetup{style=bw}
+
+Python black and white:
+\SemCoInput{pydemo}\SemCoSetup{style=colorful}
+
+Python colourful:
+\SemCoInput{pydemo}
+
+Assembly:
+\SemCoInput{asmdemo}
+
+Python mini:
+
+\begin{SemCoMiniEnv}{python}
+class A:
+  def abc(): pass
+\end{SemCoMiniEnv}
+
+\SemCoInputPart{demo}{Abc } is a dangerous thing.
+\SemCoInputPart{demo}{Abc} is, too.
+\SemCoInputPart{demo}{fmt::print} is very fancy, though.
+\SemCoInputPart{demo}{std::string} allocates memory on the heap, meaning that \SemCoInputPart{demo}{Abc abc} includes a heap allocation.
+\SemCoMini{nasm}{zeroupper} is a common operation in mixed vectorized code, while \SemCoMini{nasm}{vpermpd ymm0, ymmword ptr [rsp + 8], 57} is a very compact permutation.
+\begin{SemCoAnalyzeEnv}{nasm}{nasm-test}
+abc:
+  mov rsi, BYTE PTR [rdi+rax*8]
+\end{SemCoAnalyzeEnv}
+In \SemCoInputPart{nasm-test}{mov rsi, BYTE PTR [rdi+rax*8]}, \SemCoInputPart{nasm-test}{mov} copies the byte starting at \SemCoInputPart{nasm-test}{[rdi+rax*8]} to \SemCoInputPart{nasm-test}{rsi}.
+\end{document}

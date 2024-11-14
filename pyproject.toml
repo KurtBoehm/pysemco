@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pysemco"
+authors = [{ name = "Kurt Böhm", email = "kurbo96@gmail.com" }]
+version = "1.0.0"
+description = "Python code analysis and typesetting"
+requires-python = ">=3.11"
+dependencies = [
+  "multilspy@git+https://github.com/KurtBoehm/multilspy",
+  "platformdirs",
+  "PyGithub",
+  "Pygments",
+  "requests",
+]
+
+[tool.setuptools.package-data]
+"pysemco.lsp" = ["clangd_params.json", "pyright_params.json"]
+"pysemco.lsp.download" = ["pyright.patch"]
+
+[project.scripts]
+pysemco_tex = "pysemco.pysemco_tex:run"
