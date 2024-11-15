@@ -11,24 +11,27 @@ import requests
 from pysemco.lsp.download.defs import data_path, github, update_version, version_check
 
 
-def _get_dir():
+def _get_dir(log: bool):
     """Determine the path to store pyright at."""
 
     verch = version_check("pyright")
     if verch is not None and not verch.check:
-        print("pyright is up to date!")
+        if log:
+            print("pyright is up to date!")
         return data_path / f"pyright-{verch.version}"
 
     repo = github().get_repo("microsoft/pyright")
     tarball = repo.get_latest_release().tarball_url
     version = tarball.rsplit("/", 1)[-1]
     if verch is not None and verch.version == version:
-        print("pyright version checked and up to date!")
+        if log:
+            print("pyright version checked and up to date!")
         update_version("pyright", version)
         return data_path / f"pyright-{version}"
 
     dir = data_path / f"pyright-{version}"
-    print(f"Download pyright to {dir}…")
+    if log:
+        print(f"Download pyright to {dir}…")
 
     if verch is not None:
         rmtree(data_path / f"pyright-{verch.version}")
@@ -60,8 +63,8 @@ def _get_dir():
     return dir
 
 
-def get_pyright_path():
+def get_pyright_path(log: bool):
     """Get the path of the pyright executable."""
-    lsp = _get_dir() / "packages" / "pyright" / "langserver.index.js"
+    lsp = _get_dir(log) / "packages" / "pyright" / "langserver.index.js"
     assert lsp.exists()
     return lsp

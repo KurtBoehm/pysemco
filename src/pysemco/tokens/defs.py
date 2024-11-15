@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from os import PathLike
 
 StrPath = str | PathLike[str]
@@ -41,13 +41,19 @@ class SemanticToken:
             self.token_modifiers,
         )
 
+    def with_token_type(self, t: str):
+        return replace(self, token_type=t)
 
-SemanticTokens = list[SemanticToken]
+
+@dataclass
+class SemanticTokens:
+    txt: str
+    toks: list[SemanticToken]
 
 
-def combine_tokens(toks: SemanticTokens) -> SemanticTokens:
+def combine_tokens(toks: list[SemanticToken]) -> list[SemanticToken]:
     """Merge adjacent tokens with the same type and modifiers."""
-    out: SemanticTokens = []
+    out: list[SemanticToken] = []
     for tok in toks:
         if (
             len(out) > 0

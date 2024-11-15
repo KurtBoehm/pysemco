@@ -24,16 +24,18 @@ class PyrightServer(LanguageServer):
     def __init__(
         self,
         logger: MultilspyLogger,
-        repository_root: Path,
+        root: Path,
+        *,
         pyright_cmd: str | Path | None = None,
         trace_lsp_communication: bool = False,
+        log_lsp: bool,
     ):
         if pyright_cmd is None:
-            pyright_cmd = get_pyright_path()
+            pyright_cmd = get_pyright_path(log_lsp)
         super().__init__(
             MultilspyConfig(Language.PYTHON, trace_lsp_communication),
             logger,
-            str(repository_root),
+            str(root),
             ProcessLaunchInfo(cmd=f"{pyright_cmd} --stdio"),
             "python",
         )

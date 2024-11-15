@@ -23,16 +23,18 @@ class ClangdServer(LanguageServer):
     def __init__(
         self,
         logger: MultilspyLogger,
-        repository_root: Path,
+        root: Path,
+        *,
         clangd_cmd: str | Path | None = None,
         trace_lsp_communication: bool = False,
+        log_lsp: bool,
     ):
         if clangd_cmd is None:
-            clangd_cmd = get_clangd_path()
+            clangd_cmd = get_clangd_path(log_lsp)
         super().__init__(
             MultilspyConfig("cpp", trace_lsp_communication),  # type: ignore
             logger,
-            str(repository_root),
+            str(root),
             ProcessLaunchInfo(cmd=str(clangd_cmd)),
             "cpp",
         )

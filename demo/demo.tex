@@ -11,17 +11,7 @@
 \SemCoAnalyze{nasm}{asmdemo}{.}{demo/demo.asm}
 \SemCoAnalyze{python}{pydemo}{.}{demo/demo.py}
 
-\ExplSyntaxOn
-\def\TimeTest{%
-  \unixtime_parse:nN{D:20241113204743Z}\g_tmpa_int%
-  \unixtime_parse:nN{D:20241113204743+01'00'}\g_tmpb_int%
-  1731530863---\int_use:N\g_tmpa_int,~1731534463---\int_use:N\g_tmpb_int%
-}
-\ExplSyntaxOff
-
 \begin{document}
-\TimeTest{}
-
 C++:
 \SemCoInput{demo}\SemCoSetup{style=bw}
 

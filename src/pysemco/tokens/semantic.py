@@ -14,13 +14,13 @@ def parse_semantic_tokens(
     semantic_tokens: "LspSemanticTokens",
     token_types: list[str],
     token_modifiers: list[str],
-):
+) -> list[SemanticToken]:
     """Convert the semantic tokens provided by an LSP to pysemco’s tokens."""
 
     tokens = semantic_tokens["data"]
     assert len(tokens) % 5 == 0
     prev: SemanticToken | None = None
-    trans = []
+    trans: list[SemanticToken] = []
     for i in range(0, len(tokens), 5):
         delta_line, delta_start, length, token_type, token_mods_bf = tokens[i : i + 5]
         token_type = token_types[token_type]
@@ -64,7 +64,7 @@ async def semantic_tokens(
     lsp: "LanguageServer",
     file: Path,
     contents: str | None = None,
-):
+) -> list[SemanticToken]:
     """Compute and convert semantic tokens for the given file using the given LSP."""
 
     async with lsp.start_server():

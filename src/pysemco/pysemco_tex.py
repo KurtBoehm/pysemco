@@ -1,34 +1,18 @@
 import json
 from argparse import ArgumentParser, Namespace
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from pathlib import Path
 from typing import NamedTuple
 
 from .serialization import deserialize, serialize
 from .tokens import (
+    SemanticToken,
     SemanticTokens,
     compute_minimal_tokens,
-    compute_tokens,
+    compute_tokens_sync,
     latex_line_merge,
     to_latex,
 )
-
-
-@dataclass
-class TokenInfo:
-    """The output of the analysis together with the source code that was analyzed.
-
-    `txt` can be used to check whether the analysis is applicable to a given file.
-
-    Attributes:
-        txt:
-            The source code to which the `tokens` correspond to.
-        tokens:
-            The tokens corresponding to `txt`.
-    """
-
-    txt: str
-    tokens: SemanticTokens
 
 
 def convert_params(params_str: str) -> dict[str, int | str]:
@@ -59,17 +43,16 @@ def run_analyze(args: Namespace):
             with open(src, "r") as f:
                 txt = f.read()
 
-        tokens = compute_tokens(args.language, root, src, txt)
-        info = TokenInfo(txt, tokens)
+        tokens = compute_tokens_sync(args.language, root, src, txt, log_lsp=True)
         with open(dst, "w") as f:
-            json.dump(serialize(info), f)
+            json.dump(serialize(tokens), f)
 
     if dst.exists():
         with open(src, "r") as f:
             txt = f.read()
         with open(dst, "r") as f:
-            info = deserialize(json.load(f), TokenInfo)
-        if txt != info.txt:
+            tokens = deserialize(json.load(f), SemanticTokens)
+        if txt != tokens.txt:
             save_tokens(txt)
     else:
         save_tokens()
@@ -77,11 +60,11 @@ def run_analyze(args: Namespace):
 
 def run_texify(args: Namespace):
     with open(args.in_path, "r") as f:
-        info = deserialize(json.load(f), TokenInfo)
+        tokens = deserialize(json.load(f), SemanticTokens)
 
     params = convert_params(args.params)
 
-    latex_lines = to_latex(info.txt, info.tokens)
+    latex_lines = to_latex(SemanticTokens(tokens.txt, tokens.toks))
     if (end := params.get("LineEnd")) is not None:
         assert isinstance(end, int)
         latex_lines = latex_lines[:end]
@@ -95,8 +78,8 @@ def run_texify(args: Namespace):
 
 def run_texify_partial(args: Namespace):
     with open(args.in_path, "r") as f:
-        info = deserialize(json.load(f), TokenInfo)
-    lines = info.txt.splitlines()
+        tokens = deserialize(json.load(f), SemanticTokens)
+    lines = tokens.txt.splitlines()
 
     txt: str = args.txt
     occs = [
@@ -111,9 +94,9 @@ def run_texify_partial(args: Namespace):
         start: int
         end: int
         # the tokens that are fully within the given character range
-        full_toks: SemanticTokens
+        full_toks: list[SemanticToken]
         # the tokens that are partially within the given character range
-        all_toks: SemanticTokens
+        all_toks: list[SemanticToken]
 
     tokens = [
         TokTup(
@@ -122,12 +105,12 @@ def run_texify_partial(args: Namespace):
             end,
             [
                 t
-                for t in info.tokens
+                for t in tokens.toks
                 if t.line == line and t.start >= start and t.end <= end
             ],
             [
                 t.limited(start, end)
-                for t in info.tokens
+                for t in tokens.toks
                 if t.line == line and t.start < end and t.end > start
             ],
         )
@@ -136,9 +119,9 @@ def run_texify_partial(args: Namespace):
     if len(singles := [t for t in tokens if len(t.full_toks) == 1]) > 0:
         tokens = singles
 
-    def latex(start: int, toks: SemanticTokens):
+    def latex(start: int, toks: list[SemanticToken]):
         toks = [replace(t, line=0, start=t.start - start) for t in toks]
-        (out,) = to_latex(txt, toks, space=False)
+        (out,) = to_latex(SemanticTokens(txt, toks), space=False)
         return out
 
     index: int | None = args.index
@@ -157,7 +140,9 @@ def run_texify_partial(args: Namespace):
 
 
 def run_texify_minimal(args: Namespace):
-    (out,) = to_latex(args.txt, compute_minimal_tokens(args.language, args.txt))
+    (out,) = to_latex(
+        SemanticTokens(args.txt, compute_minimal_tokens(args.language, args.txt))
+    )
     with open(args.out_path, "w") as f:
         print(f"{out}%", file=f)
 
@@ -165,7 +150,9 @@ def run_texify_minimal(args: Namespace):
 def run_texify_minimal_file(args: Namespace):
     with open(args.in_path, "r") as f:
         txt = f.read()
-    latex_lines = to_latex(txt, compute_minimal_tokens(args.language, txt))
+    latex_lines = to_latex(
+        SemanticTokens(txt, compute_minimal_tokens(args.language, txt))
+    )
     with open(args.out_path, "w") as f:
         print(latex_line_merge(latex_lines), file=f)
 
