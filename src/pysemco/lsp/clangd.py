@@ -16,6 +16,7 @@ from multilspy.multilspy_config import MultilspyConfig
 from multilspy.multilspy_logger import MultilspyLogger
 
 from ..lsp.download.clangd import get_clangd_path
+from ..tokens.defs import StrPath
 from .language_server import LanguageServer
 
 
@@ -25,7 +26,7 @@ class ClangdServer(LanguageServer):
         logger: MultilspyLogger,
         root: Path,
         *,
-        clangd_cmd: str | Path | None = None,
+        clangd_cmd: StrPath | None = None,
         trace_lsp_communication: bool = False,
         log_lsp: bool,
     ):

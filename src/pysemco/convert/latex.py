@@ -41,12 +41,9 @@ def latex_token(txt: str, token_type: str, space: bool = True) -> str:
     """Convert the given token into the LaTeX SemCo token.
 
     Args:
-        txt:
-            The text of the token.
-        token_type:
-            The type of the token as used by SemCo.
-        space:
-            Whether to replace spaces with a SemCo-specific macro. Defaults to True.
+        txt: The text of the token.
+        token_type: The type of the token as used by SemCo.
+        space: Whether to replace spaces with a SemCo-specific macro.
     """
 
     return f"\\SemCoFormat{{{token_type}}}{{{_texify(txt, space)}}}"
@@ -56,12 +53,8 @@ def to_latex(tokens: SemanticTokens, space: bool = True) -> list[str]:
     """Convert the given code with corresponding tokens into LaTeX SemCo macros.
 
     Args:
-        txt:
-            The code to be converted.
-        tokens:
-            The tokens used for formatting the code.
-        space:
-            Whether to replace spaces with a SemCo-specific macro. Defaults to True.
+        tokens: The tokens used for formatting the code.
+        space: Whether to replace spaces with a SemCo-specific macro.
     """
 
     lines = tokens.txt.splitlines()
@@ -88,6 +81,7 @@ def to_latex(tokens: SemanticTokens, space: bool = True) -> list[str]:
 
 
 def latex_line_merge(lines: list[str]) -> str:
+    r"""Merge LaTeX lines using \\\\."""
     return "\n".join(
         f"{l}\\\\" if i + 1 < len(lines) else f"{l}%" for i, l in enumerate(lines)
     )

@@ -12,7 +12,7 @@ from pysemco.lsp.download.defs import data_path, github, update_version, version
 
 
 def _get_dir(log: bool):
-    """Determine the path to store pyright at."""
+    """Determine the path to store pyright at, optionally logging the LSP state."""
 
     verch = version_check("pyright")
     if verch is not None and not verch.check:
@@ -64,7 +64,7 @@ def _get_dir(log: bool):
 
 
 def get_pyright_path(log: bool):
-    """Get the path of the pyright executable."""
+    """Get the path of the pyright executable, optionally logging the LSP state."""
     lsp = _get_dir(log) / "packages" / "pyright" / "langserver.index.js"
     assert lsp.exists()
     return lsp

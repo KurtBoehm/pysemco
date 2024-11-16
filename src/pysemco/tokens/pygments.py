@@ -5,32 +5,8 @@ from pygments import lex
 from pygments.lexer import LexerMeta, RegexLexer, bygroups, include
 from pygments.lexers import find_lexer_class_by_name
 from pygments.lexers.c_cpp import CppLexer as _CppLexer
-from pygments.lexers.python import PythonLexer as _PyLexer
 
 from .defs import SemanticToken, combine_tokens
-
-_CPP = {
-    "auto": token.Keyword.Type,
-    "bool": token.Keyword.Type,
-    "char": token.Keyword.Type,
-    "char8_t": token.Keyword.Type,
-    "char16_t": token.Keyword.Type,
-    "char32_t": token.Keyword.Type,
-    "double": token.Keyword.Type,
-    "float": token.Keyword.Type,
-    "int": token.Keyword.Type,
-    "long": token.Keyword.Type,
-    "short": token.Keyword.Type,
-    "signed": token.Keyword.Type,
-    "unsigned": token.Keyword.Type,
-    "void": token.Keyword.Type,
-    "wchar_t": token.Keyword.Type,
-    "false": token.Keyword.Constant,
-    "true": token.Keyword.Constant,
-    "nullptr": token.Keyword.Constant,
-    "this": token.Keyword.Constant,
-    "operator": token.Keyword.Operator,
-}
 
 
 class NasmLexer(RegexLexer):
@@ -118,30 +94,59 @@ class NasmLexer(RegexLexer):
     }
 
     def get_tokens(self, text: str, unfiltered: bool = False):
+        """Fix up labels in the existing tokens."""
+        # Store all labels without the terminating colon
         labels: set[str] = set()
         for tkind, tstr in super().get_tokens(text, unfiltered):
             if tkind is token.Name.Label:
                 labels.add(tstr.rstrip(":"))
         for tkind, tstr in super().get_tokens(text, unfiltered):
+            # Remove the colon from labels
             if tkind is token.Name.Label:
                 yield token.Name.Label, tstr[:-1]
                 yield token.Punctuation, ":"
                 continue
+            # Mark any use of a label as a Name.Label.
             if tstr in labels:
                 tkind = token.Name.Label
             yield tkind, tstr
 
 
 class CppLexer(_CppLexer):
+    _keyword_kinds = {
+        "auto": token.Keyword.Type,
+        "bool": token.Keyword.Type,
+        "char": token.Keyword.Type,
+        "char8_t": token.Keyword.Type,
+        "char16_t": token.Keyword.Type,
+        "char32_t": token.Keyword.Type,
+        "double": token.Keyword.Type,
+        "float": token.Keyword.Type,
+        "int": token.Keyword.Type,
+        "long": token.Keyword.Type,
+        "short": token.Keyword.Type,
+        "signed": token.Keyword.Type,
+        "unsigned": token.Keyword.Type,
+        "void": token.Keyword.Type,
+        "wchar_t": token.Keyword.Type,
+        "false": token.Keyword.Constant,
+        "true": token.Keyword.Constant,
+        "nullptr": token.Keyword.Constant,
+        "this": token.Keyword.Constant,
+        "operator": token.Keyword.Operator,
+    }
+
     def get_tokens(self, text: str, unfiltered: bool = False):
+        """Replace the `Keyword` token kind with a more specific sub-kind."""
         for ttype, tstr in super().get_tokens(text, unfiltered):
             if ttype is token.Keyword:
-                yield _CPP.get(tstr, ttype), tstr
+                yield CppLexer._keyword_kinds.get(tstr, ttype), tstr
             else:
                 yield ttype, tstr
 
 
 def _get_lexer(lang: str) -> LexerMeta:
+    """Get the lexer for the given language using the custom ones for C++ and nasm."""
     if lang == "cpp":
         return CppLexer
     if lang == "nasm":

@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from html import escape
 
 from pysemco.convert.colors import StyleDict, colorful
@@ -69,17 +70,13 @@ def html_div(lines: list[str]) -> str:
     )
 
 
+@dataclass
 class HtmlDisplay:
-    def __init__(
-        self,
-        tokens: SemanticTokens,
-        token_style: dict[str, str],
-    ) -> None:
-        self.tokens = tokens
-        self.token_style = token_style
+    """Convert tokens to HTML for Jupyter display."""
 
-    def __repr__(self) -> str:
-        return f"HtmlDisplay(tokens={self.tokens!r}, token_style={self.token_style!r})"
+    tokens: SemanticTokens
+    token_style: dict[str, str]
 
     def _repr_html_(self) -> str:
+        """An HTML representation of the stored tokens with the stored style."""
         return html_div(to_html(self.tokens, self.token_style))

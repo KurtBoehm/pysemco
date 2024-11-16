@@ -47,6 +47,8 @@ class SemanticToken:
 
 @dataclass
 class SemanticTokens:
+    """A list of semantic tokens together with the corresponding code."""
+
     txt: str
     toks: list[SemanticToken]
 

@@ -17,6 +17,7 @@ async def compute_tokens_cpp(
         root: The root directory of the workspace of the project.
         file: The path of the C++ file relative to root (or absolute).
         txt: The contents of `file`, which can be provided to avoid file I/O.
+        log_lsp: Whether to log clangd’s state.
     """
     from multilspy.language_server import MultilspyLogger
 
@@ -63,6 +64,7 @@ async def compute_tokens_python(
         root: The root directory of the workspace of the project.
         file: The path of the Python file relative to root (or absolute).
         txt: The contents of `file`, which can be provided to avoid file I/O.
+        log_lsp: Whether to log Pyright’s state.
     """
     from multilspy.language_server import MultilspyLogger
 
@@ -97,6 +99,7 @@ async def compute_tokens(
         root: The root directory of the workspace of the project.
         file: The path of the source file relative to root (or absolute).
         txt: The contents of `file`, which can be provided to avoid file I/O.
+        log_lsp: Whether to log the language server’s state, if any.
     """
     from .pygments import pygments_tokens
 
@@ -121,6 +124,15 @@ def compute_tokens_sync(
     txt: str | None = None,
     log_lsp: bool = False,
 ) -> SemanticTokens:
+    """Compute tokens for the given language synchronously using appropriate methods.
+
+    Args:
+        lang: The language used.
+        root: The root directory of the workspace of the project.
+        file: The path of the source file relative to root (or absolute).
+        txt: The contents of `file`, which can be provided to avoid file I/O.
+        log_lsp: Whether to log the language server’s state, if any.
+    """
     import asyncio
 
     return asyncio.run(compute_tokens(lang, root, file, txt, log_lsp=log_lsp))

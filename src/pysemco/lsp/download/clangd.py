@@ -9,7 +9,7 @@ from pysemco.lsp.download.defs import data_path, github, update_version, version
 
 
 def _get_dir(log: bool) -> Path:
-    """Determine the path to store clangd at."""
+    """Determine the path to store clangd at, optionally logging the LSP state."""
     verch = version_check("clangd")
     if verch is not None and not verch.check:
         if log:
@@ -51,7 +51,7 @@ def _get_dir(log: bool) -> Path:
 
 
 def get_clangd_path(log: bool) -> Path:
-    """Get the path of the clangd executable."""
+    """Get the path of the clangd executable, optionally logging the LSP state."""
     lsp = _get_dir(log=log) / "bin" / "clangd"
     assert lsp.exists()
     lsp.chmod(0o755)

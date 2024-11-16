@@ -17,6 +17,7 @@ from multilspy.multilspy_config import MultilspyConfig
 from multilspy.multilspy_logger import MultilspyLogger
 
 from ..lsp.download.pyright import get_pyright_path
+from ..tokens.defs import StrPath
 from .language_server import LanguageServer
 
 
@@ -26,7 +27,7 @@ class PyrightServer(LanguageServer):
         logger: MultilspyLogger,
         root: Path,
         *,
-        pyright_cmd: str | Path | None = None,
+        pyright_cmd: StrPath | None = None,
         trace_lsp_communication: bool = False,
         log_lsp: bool,
     ):
