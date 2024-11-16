@@ -98,7 +98,11 @@ class HtmlDisplay:
         tokens: SemanticTokens,
         token_style: dict[str, str],
     ) -> None:
-        self.content = html_div(to_html(tokens, token_style))
+        self.tokens = tokens
+        self.token_style = token_style
+
+    def __repr__(self) -> str:
+        return f"HtmlDisplay(tokens={self.tokens!r}, token_style={self.token_style!r})"
 
     def _repr_html_(self) -> str:
-        return self.content
+        return html_div(to_html(self.tokens, self.token_style))

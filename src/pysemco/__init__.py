@@ -16,6 +16,7 @@ from .tokens import (
     compute_tokens,
     compute_tokens_cpp,
     compute_tokens_python,
+    compute_tokens_sync,
     parse_semantic_tokens,
     semantic_tokens,
 )

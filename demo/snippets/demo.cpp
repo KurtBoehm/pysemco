@@ -1,10 +1,11 @@
+#include <concepts>
 #include <cstdlib>
 #include <string>
 
 #include <fmt/core.h>
 #include <fmt/format.h>
 
-template<typename T>
+template<std::integral T>
 struct Abc {
   int a;
   T b;
