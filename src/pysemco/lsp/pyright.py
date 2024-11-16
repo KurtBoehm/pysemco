@@ -16,8 +16,8 @@ from multilspy.lsp_protocol_handler.server import ProcessLaunchInfo
 from multilspy.multilspy_config import MultilspyConfig
 from multilspy.multilspy_logger import MultilspyLogger
 
-from ..lsp.download.pyright import get_pyright_path
 from ..tokens.defs import StrPath
+from .download.pyright import get_pyright_path
 from .language_server import LanguageServer
 
 

@@ -15,8 +15,8 @@ from multilspy.lsp_protocol_handler.server import ProcessLaunchInfo
 from multilspy.multilspy_config import MultilspyConfig
 from multilspy.multilspy_logger import MultilspyLogger
 
-from ..lsp.download.clangd import get_clangd_path
 from ..tokens.defs import StrPath
+from .download.clangd import get_clangd_path
 from .language_server import LanguageServer
 
 

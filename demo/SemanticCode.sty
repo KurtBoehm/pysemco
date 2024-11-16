@@ -262,7 +262,7 @@
 \cs_new:Nn\semco_venv_init:{
   \sys_shell_now:n{rm ~ -rf ~ .semco/* ~ .semco/.cache}
   \sys_shell_now:n{python3 ~ -m ~ venv ~ .semco/venv}
-  \sys_shell_now:n{./.semco/venv/bin/pip3 ~ install ~ .}
+  \sys_shell_now:n{./.semco/venv/bin/pip3 ~ install ~ -e ~ .}
 }
 \file_if_exist:nTF{.semco/venv/bin/pysemco_tex}{
   \int_new:N\g_semco_age_int

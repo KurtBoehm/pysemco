@@ -7,13 +7,13 @@
 
 \usepackage{demo/SemanticCode}
 
-\SemCoAnalyze{cpp}{demo}{.}{demo/snippets/demo.cpp}
+\SemCoAnalyze{cpp}{cppdemo}{.}{demo/snippets/demo.cpp}
 \SemCoAnalyze{nasm}{asmdemo}{.}{demo/snippets/demo.asm}
 \SemCoAnalyze{python}{pydemo}{.}{demo/snippets/demo.py}
 
 \begin{document}
 C++:
-\SemCoInput{demo}\SemCoSetup{style=bw}
+\SemCoInput{cppdemo}\SemCoSetup{style=bw}
 
 Python black and white:
 \SemCoInput{pydemo}\SemCoSetup{style=colorful}
@@ -31,10 +31,10 @@ class A:
   def abc(): pass
 \end{SemCoMiniEnv}
 
-\SemCoInputPart{demo}{Abc } is a dangerous thing.
-\SemCoInputPart{demo}{Abc} is, too.
-\SemCoInputPart{demo}{fmt::print} is very fancy, though.
-\SemCoInputPart{demo}{std::string} allocates memory on the heap, meaning that \SemCoInputPart{demo}{Abc abc} includes a heap allocation.
+\SemCoInputPart{cppdemo}{Abc } is a dangerous thing.
+\SemCoInputPart{cppdemo}{Abc} is, too.
+\SemCoInputPart{cppdemo}{fmt::print} is very fancy, though.
+\SemCoInputPart{cppdemo}{std::string} allocates memory on the heap, meaning that \SemCoInputPart{cppdemo}{Abc abc} includes a heap allocation.
 \SemCoMini{nasm}{zeroupper} is a common operation in mixed vectorized code, while \SemCoMini{nasm}{vpermpd ymm0, ymmword ptr [rsp + 8], 57} is a very compact permutation.
 \begin{SemCoAnalyzeEnv}{nasm}{nasm-test}
 abc:
