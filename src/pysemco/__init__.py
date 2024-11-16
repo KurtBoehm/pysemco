@@ -1,9 +1,11 @@
 from .convert import (
     HtmlDisplay,
+    ansi_style_colorful,
     html_div,
     html_style_google,
     latex_line_merge,
     latex_token,
+    to_ansi,
     to_html,
     to_latex,
 )
