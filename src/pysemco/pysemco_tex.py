@@ -4,14 +4,13 @@ from dataclasses import replace
 from pathlib import Path
 from typing import NamedTuple
 
+from .convert import latex_line_merge, to_latex
 from .serialization import deserialize, serialize
 from .tokens import (
     SemanticToken,
     SemanticTokens,
     compute_minimal_tokens,
     compute_tokens_sync,
-    latex_line_merge,
-    to_latex,
 )
 
 

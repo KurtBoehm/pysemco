@@ -1,4 +1,4 @@
-from .defs import SemanticToken, SemanticTokens
+from ..tokens import SemanticToken, SemanticTokens
 
 
 def _texify(txt: str, space: bool) -> str:

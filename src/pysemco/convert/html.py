@@ -1,6 +1,6 @@
 from html import escape
 
-from .defs import SemanticToken, SemanticTokens
+from ..tokens import SemanticToken, SemanticTokens
 
 _red = "color:#EA4335;"  # GoogleRed
 _green = "color:#319243;"  # GoogleGreen!50!MaterialGreen800
