@@ -46,6 +46,7 @@ async def compute_tokens_cpp(
             else t
         )
         for t in tokens_clangd
+        if t.token_type != "operator"
     ]
 
     tokens_pygments = pygments_tokens("cpp", txt)
