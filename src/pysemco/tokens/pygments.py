@@ -5,6 +5,7 @@ from pygments import lex
 from pygments.lexer import LexerMeta, RegexLexer, bygroups, include
 from pygments.lexers import find_lexer_class_by_name
 from pygments.lexers.c_cpp import CppLexer as _CppLexer
+from pygments.lexers.python import PythonLexer as _PythonLexer
 
 from .defs import SemanticToken, combine_tokens
 
@@ -145,12 +146,24 @@ class CppLexer(_CppLexer):
                 yield ttype, tstr
 
 
+class PythonLexer(_PythonLexer):
+    def get_tokens(self, text: str, unfiltered: bool = False):
+        """Replace the `Keyword` token kind with a more specific sub-kind."""
+        for ttype, tstr in super().get_tokens(text, unfiltered):
+            if ttype is token.Operator.Word:
+                yield token.Keyword, tstr
+            else:
+                yield ttype, tstr
+
+
 def _get_lexer(lang: str) -> LexerMeta:
     """Get the lexer for the given language using the custom ones for C++ and nasm."""
     if lang == "cpp":
         return CppLexer
     if lang == "nasm":
         return NasmLexer
+    if lang == "python":
+        return PythonLexer
     return find_lexer_class_by_name(lang)
 
 

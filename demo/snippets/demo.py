@@ -16,4 +16,5 @@ class Abc[T]:
 dummy = (True, False, None, str, float, sum)
 
 abc = Abc(a=0, b=32.5, c="abc")
-print(f"{argv[0]} {len(argv)} {abc.d}")
+for i in range(len(argv)):
+    print(f"{argv[0]} {len(argv)} {abc.d} {abc.d is float}")
