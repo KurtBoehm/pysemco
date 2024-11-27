@@ -136,12 +136,19 @@ class CppLexer(_CppLexer):
         "this": token.Keyword.Constant,
         "operator": token.Keyword.Operator,
     }
+    _builtin_kinds = {
+        "false": token.Keyword.Constant,
+        "true": token.Keyword.Constant,
+        "NULL": token.Name.Macro,
+    }
 
     def get_tokens(self, text: str, unfiltered: bool = False):
         """Replace the `Keyword` token kind with a more specific sub-kind."""
         for ttype, tstr in super().get_tokens(text, unfiltered):
             if ttype is token.Keyword:
                 yield CppLexer._keyword_kinds.get(tstr, ttype), tstr
+            elif ttype is token.Name.Builtin:
+                yield CppLexer._builtin_kinds.get(tstr, ttype), tstr
             else:
                 yield ttype, tstr
 
@@ -193,6 +200,9 @@ def pygments_tokens(lang: str, txt: str) -> list[SemanticToken]:
             continue
         if token.is_token_subtype(tok, token.Name.Label):
             addtok("label")
+            continue
+        if token.is_token_subtype(tok, token.Name.Macro):
+            addtok("macro")
             continue
         if token.is_token_subtype(tok, token.Comment.Preproc):
             addtok("preprocessor")
