@@ -291,13 +291,13 @@
 % #1: code name
 \NewDocumentCommand{\SemCoInput}{O{} m}{%
   \sys_shell_now:n{.semco/venv/bin/pysemco_tex ~ texify ~ "#1" ~ ".semco/#2.json" ~ ".semco/#2.tex"}%
-  \begin{SemCoFormatEnv}\input{.semco/#2.tex}\end{SemCoFormatEnv}%
+  \begin{SemCoFormatEnv}\file_input:n{.semco/#2.tex}\end{SemCoFormatEnv}%
 }
 
 \cs_new:Nn\semco_input_part_work:nnnn{%
   \sys_shell_now:e{.semco/venv/bin/pysemco_tex ~ texify_partial ~ \IfValueT{#1}{--index ~ #1} ~ ".semco/#2.json" ~ "#3" ~ #4}%
   \prop_gput:Nxx\g_semco_part_prop{{#1}{#2}{#3}}{#4}%
-  \input{#4}%
+  \file_input:n{#4}%
   \sys_shell_now:e{echo ~ '\string\@semco@store@part@cache\IfValueT{#1}{{#1}}{#2}{#3}{#4}' ~ >> ~ .semco/.cache}%
   \int_gincr:N\g_semco_tmp_cntr%
 }
@@ -309,7 +309,7 @@
     \prop_get:NxNTF\g_semco_part_prop{{#1}{#2}{#3}}\g_semco_file_name{%
       % if in cache: read existing file if it exists, recompute otherwise
       \file_if_exist:nTF{\tl_use:N\g_semco_file_name}{%
-        \input{\tl_use:N\g_semco_file_name}%
+        \file_input:n{\tl_use:N\g_semco_file_name}%
       }{%
         \semco_input_part_work:nnnn{#1}{#2}{#3}{\tl_use:N\g_semco_file_name}%
       }%
@@ -323,7 +323,7 @@
 \cs_new:Nn\semco_input_mini_work:nnn{%
   \sys_shell_now:e{.semco/venv/bin/pysemco_tex ~ texify_minimal ~ #1 ~ "#2" ~ #3}%
   \prop_gput:Nxx\g_semco_mini_prop{{#1}{#2}}{#3}%
-  \input{#3}%
+  \file_input:n{#3}%
   \sys_shell_now:e{echo ~ '\string\@semco@store@mini@cache{#1}{#2}{#3}' ~ >> ~ .semco/.cache}%
   \int_gincr:N\g_semco_tmp_cntr%
 }
@@ -334,7 +334,7 @@
     \prop_get:NxNTF\g_semco_mini_prop{{#1}{#2}}\g_semco_file_name{%
       % if in cache: read existing file if it exists, recompute otherwise
       \IfFileExists{\tl_use:N\g_semco_file_name}{%
-        \input{\tl_use:N\g_semco_file_name}%
+        \file_input:n{\tl_use:N\g_semco_file_name}%
       }{%
         \semco_input_mini_work:nnn{#1}{#2}{\tl_use:N\g_semco_file_name}%
       }%
@@ -359,7 +359,7 @@
 \cs_new:Nn\semco_mini_file_work:nnnn{%
   \sys_shell_now:e{.semco/venv/bin/pysemco_tex ~ texify_minimal_file ~ "#1" ~ #2 ~ "#3" ~ #4}%
   \prop_gput:Nxx\g_semco_mini_prop{{#2}{\g_semco_key_tl}}{#4}%
-  \input{#4}%
+  \file_input:n{#4}%
   \sys_shell_now:e{echo ~ '\string\@semco@store@mini@cache{#2}{\g_semco_key_tl}{#4}' ~ >> ~ .semco/.cache}%
   \int_gincr:N\g_semco_tmp_cntr%
 }
@@ -376,7 +376,7 @@
     \prop_get:NxNTF\g_semco_mini_prop{{#1}{#2}{\g_semco_key_tl}}\g_semco_file_name{%
       % if in cache: read existing file if it exists, recompute otherwise
       \IfFileExists{\tl_use:N\g_semco_file_name}{%
-        \input{\tl_use:N\g_semco_file_name}%
+        \file_input:n{\tl_use:N\g_semco_file_name}%
       }{%
         \semco_mini_file_work:nnnn{#1}{#2}{\g_semco_vrb_path}{\tl_use:N\g_semco_file_name}%
       }%

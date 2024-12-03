@@ -204,7 +204,6 @@ def pygments_tokens(
 
     if name_map is None:
         name_map = {}
-    print(f"{name_map=}")
 
     def addtok(kind: str):
         toks.append(SemanticToken(line, col, len(tokstr), kind, []))
