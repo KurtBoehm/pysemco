@@ -139,7 +139,7 @@ def compute_tokens_sync(
     return asyncio.run(compute_tokens(lang, root, file, txt, log_lsp=log_lsp))
 
 
-def compute_minimal_tokens(lang: str, txt: str):
+def compute_minimal_tokens(lang: str, txt: str, name_map: dict[str, str] | None = None):
     """Compute minimal tokens using pygments.
 
     Args:
@@ -148,4 +148,4 @@ def compute_minimal_tokens(lang: str, txt: str):
     """
     from .pygments import pygments_tokens
 
-    return pygments_tokens(lang, txt)
+    return pygments_tokens(lang, txt, name_map=name_map)

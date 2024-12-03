@@ -14,6 +14,7 @@ dependencies = [
   "platformdirs",
   "PyGithub",
   "Pygments",
+  "pyyaml",
   "requests",
 ]
 

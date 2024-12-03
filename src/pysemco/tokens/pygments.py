@@ -2,7 +2,7 @@ import re
 
 import pygments.token as token
 from pygments import lex
-from pygments.lexer import LexerMeta, RegexLexer, bygroups, include
+from pygments.lexer import LexerMeta, RegexLexer, bygroups, include, inherit, words
 from pygments.lexers import find_lexer_class_by_name
 from pygments.lexers.c_cpp import CppLexer as _CppLexer
 from pygments.lexers.python import PythonLexer as _PythonLexer
@@ -153,6 +153,25 @@ class CppLexer(_CppLexer):
                 yield ttype, tstr
 
 
+class CppAlgLexer(CppLexer):
+    tokens = {
+        "keywords": [
+            inherit,
+            (words(("parallel", "process"), suffix=r"\b"), token.Keyword),
+        ],
+    }
+
+    def get_tokens(self, text: str, unfiltered: bool = False):
+        """Replace the `Keyword` token kind with a more specific sub-kind."""
+        for ttype, tstr in super().get_tokens(text, unfiltered):
+            if ttype is token.Keyword:
+                yield CppLexer._keyword_kinds.get(tstr, ttype), tstr
+            elif ttype is token.Name.Builtin:
+                yield CppLexer._builtin_kinds.get(tstr, ttype), tstr
+            else:
+                yield ttype, tstr
+
+
 class PythonLexer(_PythonLexer):
     def get_tokens(self, text: str, unfiltered: bool = False):
         """Replace the `Keyword` token kind with a more specific sub-kind."""
@@ -167,6 +186,8 @@ def _get_lexer(lang: str) -> LexerMeta:
     """Get the lexer for the given language using the custom ones for C++ and nasm."""
     if lang == "cpp":
         return CppLexer
+    if lang == "cppalg":
+        return CppAlgLexer
     if lang == "nasm":
         return NasmLexer
     if lang == "python":
@@ -174,8 +195,16 @@ def _get_lexer(lang: str) -> LexerMeta:
     return find_lexer_class_by_name(lang)
 
 
-def pygments_tokens(lang: str, txt: str) -> list[SemanticToken]:
+def pygments_tokens(
+    lang: str,
+    txt: str,
+    name_map: dict[str, str] | None = None,
+) -> list[SemanticToken]:
     """Determine the tokens for the given code in the given language using pygments."""
+
+    if name_map is None:
+        name_map = {}
+    print(f"{name_map=}")
 
     def addtok(kind: str):
         toks.append(SemanticToken(line, col, len(tokstr), kind, []))
@@ -189,6 +218,12 @@ def pygments_tokens(lang: str, txt: str) -> list[SemanticToken]:
         line, col = max(len(lines) - 1, 0), len(lines[-1])
         curtxt += tokstr
 
+        if (
+            token.is_token_subtype(tok, token.Name)
+            and (t := name_map.get(tokstr)) is not None
+        ):
+            addtok(t)
+            continue
         if token.is_token_subtype(tok, token.Name.Attribute):
             addtok("attribute")
             continue

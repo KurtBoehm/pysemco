@@ -346,49 +346,43 @@
 }
 
 % Based on https://tex.stackexchange.com/a/62032
-\NewDocumentCommand{\GetEnv}{om}{%
-  \sys_get_shell:nnN{kpsewhich ~ --var-value ~ #2}{}\l_tmpa_tl%
-  \tl_trim_spaces:N\l_tmpa_tl%
-  \tl_if_empty:NTF\l_tmpa_tl{\tl_set:Nn\l_tmpa_tl{.}}{%
-    \tl_if_eq:NnT\l_tmpa_tl{\par}{\tl_set:Nn\l_tmpa_tl{.}}%
-  }%
-  \IfNoValueTF{#1}{%
-    \tl_use:N \l_tmpa_tl%
-  }{%
-    \tl_set_eq:NN #1\l_tmpa_tl%
+\cs_new:Nn\env_query_raw:nN{\sys_get_shell:nnN{kpsewhich ~ --var-value ~ #1}{}#2}
+\cs_new:Nn\env_query_path:nN{%
+  \env_query_raw:nN{#1}#2%
+  \tl_trim_spaces:N#2%
+  \tl_if_empty:NTF#2{\tl_set:Nn#2{.}}{%
+    \tl_if_eq:NnT#2{\par}{\tl_set:Nn#2{.}}%
   }%
 }
-\NewDocumentCommand{\GetOutputDir}{o}{%
-  \GetEnv[#1]{TEXMF_OUTPUT_DIRECTORY}%
-}
+\cs_new:Nn\env_query_path:N{\env_query_path:nN{TEXMF_OUTPUT_DIRECTORY}#1}
 
-\cs_new:Nn\semco_mini_file_work:nnn{%
-  \sys_shell_now:e{.semco/venv/bin/pysemco_tex ~ texify_minimal_file ~ #1 ~ "#2" ~ #3}%
-  \prop_gput:Nxx\g_semco_mini_prop{{#1}{\g_semco_key_tl}}{#3}%
-  \input{#3}%
-  \sys_shell_now:e{echo ~ '\string\@semco@store@mini@cache{#1}{\g_semco_key_tl}{#3}' ~ >> ~ .semco/.cache}%
+\cs_new:Nn\semco_mini_file_work:nnnn{%
+  \sys_shell_now:e{.semco/venv/bin/pysemco_tex ~ texify_minimal_file ~ "#1" ~ #2 ~ "#3" ~ #4}%
+  \prop_gput:Nxx\g_semco_mini_prop{{#2}{\g_semco_key_tl}}{#4}%
+  \input{#4}%
+  \sys_shell_now:e{echo ~ '\string\@semco@store@mini@cache{#2}{\g_semco_key_tl}{#4}' ~ >> ~ .semco/.cache}%
   \int_gincr:N\g_semco_tmp_cntr%
 }
 % #1: language
-\NewDocumentEnvironment{SemCoMiniEnv}{m}{%
+\NewDocumentEnvironment{SemCoMiniEnv}{O{} m}{%
   \VerbatimOut{\semco_vrb_name:}%
 }{%
   \endVerbatimOut%
-  \GetOutputDir[\g_semco_output_dir]%
+  \env_query_path:N\g_semco_output_dir%
   \tl_set:Nn\g_semco_vrb_path{\g_semco_output_dir/\semco_vrb_name:}%
   \file_get:nnN{\g_semco_vrb_path}{}\g_semco_vrb_content%
   \semco_tl_to_str:NN\g_semco_key_tl\g_semco_vrb_content%
   \begin{SemCoFormatEnv}%
-    \prop_get:NxNTF\g_semco_mini_prop{{#1}{\g_semco_key_tl}}\g_semco_file_name{%
+    \prop_get:NxNTF\g_semco_mini_prop{{#1}{#2}{\g_semco_key_tl}}\g_semco_file_name{%
       % if in cache: read existing file if it exists, recompute otherwise
       \IfFileExists{\tl_use:N\g_semco_file_name}{%
         \input{\tl_use:N\g_semco_file_name}%
       }{%
-        \semco_mini_file_work:nnn{#1}{\g_semco_vrb_path}{\tl_use:N\g_semco_file_name}%
+        \semco_mini_file_work:nnnn{#1}{#2}{\g_semco_vrb_path}{\tl_use:N\g_semco_file_name}%
       }%
     }{%
       % compute
-      \semco_mini_file_work:nnn{#1}{\g_semco_vrb_path}{\semco_tmp_name:}%
+      \semco_mini_file_work:nnnn{#1}{#2}{\g_semco_vrb_path}{\semco_tmp_name:}%
     }%
   \end{SemCoFormatEnv}%
 }
@@ -399,7 +393,7 @@
   \VerbatimOut{\semco_vrb_name:}%
 }{%
   \endVerbatimOut%
-  \GetOutputDir[\g_semco_output_dir]%
+  \env_query_path:N\g_semco_output_dir%
   \tl_set:Nn\g_semco_vrb_path{\g_semco_output_dir/\semco_vrb_name:}%
   \tl_set:Nn\g_semco_file_name{.semco/#2}%
   \sys_shell_now:e{mv ~ -f ~ "\g_semco_vrb_path" ~ "\g_semco_file_name"}%

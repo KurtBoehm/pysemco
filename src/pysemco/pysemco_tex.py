@@ -1,4 +1,5 @@
 import json
+import yaml
 from argparse import ArgumentParser, Namespace
 from dataclasses import replace
 from pathlib import Path
@@ -14,17 +15,8 @@ from .tokens import (
 )
 
 
-def convert_params(params_str: str) -> dict[str, int | str]:
-    def convert_value(v: str):
-        try:
-            return int(v)
-        except ValueError:
-            return v
-
-    if params_str == "":
-        return {}
-    params = {k: v for k, v in (p.split("=") for p in params_str.split(","))}
-    return {k: convert_value(v) for k, v in params.items()}
+def convert_params(pstr: str):
+    return yaml.safe_load(f"{{{pstr}}}")
 
 
 def run_analyze(args: Namespace):
@@ -149,8 +141,15 @@ def run_texify_minimal(args: Namespace):
 def run_texify_minimal_file(args: Namespace):
     with open(args.in_path, "r") as f:
         txt = f.read()
+    params = convert_params(args.params)
+    name_map = params.get("NameMap")
+    if name_map is None and (m := params.get("TokenNames")) is not None:
+        name_map = {t: k for k, l in m.items() for t in l}
     latex_lines = to_latex(
-        SemanticTokens(txt, compute_minimal_tokens(args.language, txt))
+        SemanticTokens(
+            txt,
+            compute_minimal_tokens(args.language, txt, name_map=name_map),
+        )
     )
     with open(args.out_path, "w") as f:
         print(latex_line_merge(latex_lines), file=f)
@@ -266,6 +265,10 @@ def run():
     texify_mini_file_parser = subparsers.add_parser(
         "texify_minimal_file",
         help="Convert a source file to LaTeX SemCo code with minimal analysis.",
+    )
+    texify_mini_file_parser.add_argument(
+        "params",
+        help="Additional parameters.",
     )
     texify_mini_file_parser.add_argument(
         "language",

@@ -1,3 +1,5 @@
+\setcounter{errorcontextlines}{32}
+
 \documentclass{article}
 \usepackage{expl3}
 \usepackage[a4paper,margin=2cm]{geometry}
@@ -41,4 +43,24 @@ abc:
   mov rsi, BYTE PTR [rdi+rax*8]
 \end{SemCoAnalyzeEnv}
 In \SemCoInputPart{nasm-test}{mov rsi, BYTE PTR [rdi+rax*8]}, \SemCoInputPart{nasm-test}{mov} copies the byte starting at \SemCoInputPart{nasm-test}{[rdi+rax*8]} to \SemCoInputPart{nasm-test}{rsi}.
+
+\begin{SemCoMiniEnv}[TokenNames: {namespace: [Bakery, Process], variable: [choosing, i, k, mine, num, P], function: [max]}]{cppalg}
+parallel Bakery {
+  const int P = 8;
+  int num[P] = {0[P]}; bool choosing[P] = {false[P]};
+  process Process [int i: {0, ..., P - 1}] {
+    while (true) {
+      choosing[i] = true; int mine = 0;
+      for (int k = 0; k < P; ++k) mine = max(mine, num[k]);
+      num[i] = mine + 1; choosing[i] = false;
+      for (int k = 0; k < P; ++k) {
+        while (choosing[k]);
+        while (num[k] != 0 && (num[k] < num[i] || (num[k] == num[i] && k < i)));
+      }
+      // Critical section...
+      num[i] = 0;
+    }
+  }
+}
+\end{SemCoMiniEnv}
 \end{document}
