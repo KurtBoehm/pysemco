@@ -22,6 +22,7 @@ def _texify(txt: str, space: bool) -> str:
         "%": "\\%",
         '"': "\\textquotedbl{}",
         "'": "\\textquotesingle{}",
+        "~": "\\textasciitilde{}",
         "(": "(\\allowbreak{}",
         "<": "\\textless{}",
         ">": "\\textgreater{}",

@@ -1,9 +1,10 @@
 import json
-import yaml
 from argparse import ArgumentParser, Namespace
 from dataclasses import replace
 from pathlib import Path
 from typing import NamedTuple
+
+import yaml
 
 from .convert import latex_line_merge, to_latex
 from .serialization import deserialize, serialize
