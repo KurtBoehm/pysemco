@@ -55,13 +55,14 @@ class SemanticTokens:
 
 def combine_tokens(toks: list[SemanticToken]) -> list[SemanticToken]:
     """Merge adjacent tokens with the same type and modifiers."""
-    out: list[SemanticToken] = []
-    for tok in toks:
+    out: list[SemanticToken] = [toks[0]]
+    for tok in toks[1:]:
+        last = out[-1]
         if (
-            len(out) > 0
-            and out[-1].token_type == tok.token_type
-            and out[-1].token_modifiers == tok.token_modifiers
-            and out[-1].end == tok.start
+            last.token_type == tok.token_type
+            and last.token_modifiers == tok.token_modifiers
+            and last.line == tok.line
+            and last.end == tok.start
         ):
             out[-1].length += tok.length
             continue
