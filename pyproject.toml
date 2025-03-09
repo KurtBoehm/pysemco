@@ -10,7 +10,7 @@ description = "Python code analysis and typesetting"
 requires-python = ">=3.11"
 dependencies = [
   "colorama",
-  "multilspy@git+https://github.com/KurtBoehm/multilspy",
+  "multilspy",
   "platformdirs",
   "PyGithub",
   "Pygments",
