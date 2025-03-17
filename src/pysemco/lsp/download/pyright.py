@@ -34,7 +34,9 @@ def _get_dir(log: bool):
         print(f"Download pyright to {dir}…")
 
     if verch is not None:
-        rmtree(data_path / f"pyright-{verch.version}")
+        p = data_path / f"pyright-{verch.version}"
+        if p.exists():
+            rmtree(p)
     if dir.exists():
         rmtree(dir)
 
@@ -46,8 +48,12 @@ def _get_dir(log: bool):
     subdir.rmdir()
 
     with TemporaryDirectory() as tmp:
-        patch = files() / "pyright.patch"
-        tmp_patch = Path(tmp) / "pyright.patch"
+        version_parts = [int(p) for p in version.split(".")]
+        patch_name = (
+            "pyright.patch" if version_parts > [1, 1, 396] else "pyright-396.patch"
+        )
+        patch = files() / patch_name
+        tmp_patch = Path(tmp) / patch_name
         with patch.open("r") as inf, open(tmp_patch, "w") as outf:
             outf.write(inf.read())
         subprocess.run(["git", "apply", tmp_patch], cwd=dir, check=True)
