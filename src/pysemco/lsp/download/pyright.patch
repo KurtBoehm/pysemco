@@ -1,5 +1,5 @@
 diff --git a/packages/pyright-internal/src/analyzer/declarationUtils.ts b/packages/pyright-internal/src/analyzer/declarationUtils.ts
-index 676102a54..0e17fa0c5 100644
+index 676102a54766..0e17fa0c5c15 100644
 --- a/packages/pyright-internal/src/analyzer/declarationUtils.ts
 +++ b/packages/pyright-internal/src/analyzer/declarationUtils.ts
 @@ -414,3 +414,9 @@ export function resolveAliasDeclaration(
@@ -13,10 +13,10 @@ index 676102a54..0e17fa0c5 100644
 +    return isMethod && name ? ['__getattribute__', '__getattr__', '__setattr__', '__delattr__'].includes(name) : false;
 +}
 diff --git a/packages/pyright-internal/src/analyzer/typeEvaluator.ts b/packages/pyright-internal/src/analyzer/typeEvaluator.ts
-index a1467b287..12a2f08c1 100644
+index f4efb42f65b3..a379d04d452a 100644
 --- a/packages/pyright-internal/src/analyzer/typeEvaluator.ts
 +++ b/packages/pyright-internal/src/analyzer/typeEvaluator.ts
-@@ -5946,6 +5946,21 @@ export function createTypeEvaluator(
+@@ -6070,6 +6070,21 @@ export function createTypeEvaluator(
          selfType?: ClassType | TypeVarType,
          recursionCount = 0
      ): ClassMemberLookup | undefined {
@@ -38,7 +38,7 @@ index a1467b287..12a2f08c1 100644
          const isAccessedThroughObject = TypeBase.isInstance(classType);
  
          // Always look for a member with a declared type first.
-@@ -5962,17 +5977,9 @@ export function createTypeEvaluator(
+@@ -6086,17 +6101,9 @@ export function createTypeEvaluator(
              // through an object, see if there's an attribute access override
              // method ("__getattr__", etc.).
              if ((flags & MemberAccessFlags.SkipAttributeAccessOverride) === 0 && errorNode) {
@@ -59,7 +59,7 @@ index a1467b287..12a2f08c1 100644
                  }
              }
  
-@@ -21636,10 +21643,11 @@ export function createTypeEvaluator(
+@@ -21987,10 +21994,11 @@ export function createTypeEvaluator(
              node.parent.nodeType === ParseNodeType.MemberAccess &&
              node === node.parent.d.member
          ) {
@@ -73,7 +73,7 @@ index a1467b287..12a2f08c1 100644
                  doForEachSubtype(baseType, (subtype) => {
                      let symbol: Symbol | undefined;
  
-@@ -21677,6 +21685,11 @@ export function createTypeEvaluator(
+@@ -22028,6 +22036,11 @@ export function createTypeEvaluator(
                          symbol = ModuleType.getField(subtype, memberName);
                      }
  
@@ -85,7 +85,7 @@ index a1467b287..12a2f08c1 100644
                      if (symbol) {
                          // By default, report only the declarations that have type annotations.
                          // If there are none, then report all of the unannotated declarations,
-@@ -21806,6 +21819,28 @@ export function createTypeEvaluator(
+@@ -22157,6 +22170,28 @@ export function createTypeEvaluator(
          return { decls, synthesizedTypes };
      }
  
@@ -115,19 +115,19 @@ index a1467b287..12a2f08c1 100644
          switch (declaration.type) {
              case DeclarationType.Intrinsic: {
 diff --git a/packages/pyright-internal/src/languageServerBase.ts b/packages/pyright-internal/src/languageServerBase.ts
-index 1de47a412..d25023763 100644
+index 24d25d70a083..6e3c989ba12f 100644
 --- a/packages/pyright-internal/src/languageServerBase.ts
 +++ b/packages/pyright-internal/src/languageServerBase.ts
-@@ -57,6 +57,8 @@ import {
-     ReferenceParams,
+@@ -62,6 +62,8 @@ import {
      RemoteWindow,
      RenameParams,
+     ResultProgressReporter,
 +    SemanticTokensParams,
 +    SemanticTokensRequest,
      SignatureHelp,
      SignatureHelpParams,
      SymbolInformation,
-@@ -118,6 +120,7 @@ import { HoverProvider } from './languageService/hoverProvider';
+@@ -123,6 +125,7 @@ import { HoverProvider } from './languageService/hoverProvider';
  import { canNavigateToFile } from './languageService/navigationUtils';
  import { ReferencesProvider } from './languageService/referencesProvider';
  import { RenameProvider } from './languageService/renameProvider';
@@ -135,7 +135,7 @@ index 1de47a412..d25023763 100644
  import { SignatureHelpProvider } from './languageService/signatureHelpProvider';
  import { WorkspaceSymbolProvider } from './languageService/workspaceSymbolProvider';
  import { Localizer, setLocaleOverride } from './localization/localize';
-@@ -460,6 +463,9 @@ export abstract class LanguageServerBase implements LanguageServerInterface, Dis
+@@ -479,6 +482,9 @@ export abstract class LanguageServerBase implements LanguageServerInterface, Dis
          this.connection.onHover(async (params, token) => this.onHover(params, token));
  
          this.connection.onDocumentHighlight(async (params, token) => this.onDocumentHighlight(params, token));
@@ -145,7 +145,7 @@ index 1de47a412..d25023763 100644
  
          this.connection.onSignatureHelp(async (params, token) => this.onSignatureHelp(params, token));
  
-@@ -588,6 +594,16 @@ export abstract class LanguageServerBase implements LanguageServerInterface, Dis
+@@ -620,6 +626,16 @@ export abstract class LanguageServerBase implements LanguageServerInterface, Dis
                      workDoneProgress: true,
                  },
                  callHierarchyProvider: true,
@@ -162,7 +162,7 @@ index 1de47a412..d25023763 100644
                  workspace: {
                      workspaceFolders: {
                          supported: true,
-@@ -812,6 +828,19 @@ export abstract class LanguageServerBase implements LanguageServerInterface, Dis
+@@ -853,6 +869,19 @@ export abstract class LanguageServerBase implements LanguageServerInterface, Dis
          }, token);
      }
  
@@ -183,7 +183,7 @@ index 1de47a412..d25023763 100644
          params: SignatureHelpParams,
          token: CancellationToken
 diff --git a/packages/pyright-internal/src/languageService/hoverProvider.ts b/packages/pyright-internal/src/languageService/hoverProvider.ts
-index d429afa06..6ccaf7a01 100644
+index 8a79703b4990..94f8b44e3281 100644
 --- a/packages/pyright-internal/src/languageService/hoverProvider.ts
 +++ b/packages/pyright-internal/src/languageService/hoverProvider.ts
 @@ -17,12 +17,13 @@ import {
@@ -201,7 +201,7 @@ index d429afa06..6ccaf7a01 100644
  import {
      ClassType,
      Type,
-@@ -314,6 +315,13 @@ export class HoverProvider {
+@@ -325,6 +326,13 @@ export class HoverProvider {
                          let label = 'function';
                          let isProperty = false;
  
@@ -215,7 +215,7 @@ index d429afa06..6ccaf7a01 100644
                          if (isMaybeDescriptorInstance(type, /* requireSetter */ false)) {
                              isProperty = true;
                              label = 'property';
-@@ -444,7 +452,8 @@ export class HoverProvider {
+@@ -455,7 +463,8 @@ export class HoverProvider {
                  if (resolvedDecl.isMethod) {
                      const declaredType = this._evaluator.getTypeForDeclaration(resolvedDecl)?.type;
                      isProperty = !!declaredType && isMaybeDescriptorInstance(declaredType, /* requireSetter */ false);
@@ -227,10 +227,10 @@ index d429afa06..6ccaf7a01 100644
                  let type = this._getType(node);
 diff --git a/packages/pyright-internal/src/languageService/semanticTokensProvider.ts b/packages/pyright-internal/src/languageService/semanticTokensProvider.ts
 new file mode 100644
-index 000000000..f0bea4e7f
+index 000000000000..f0ea23bda0ec
 --- /dev/null
 +++ b/packages/pyright-internal/src/languageService/semanticTokensProvider.ts
-@@ -0,0 +1,426 @@
+@@ -0,0 +1,432 @@
 +import { Position, SemanticTokensBuilder } from 'vscode-languageserver';
 +import { CancellationToken, SemanticTokens } from 'vscode-languageserver-protocol';
 +
@@ -244,9 +244,11 @@ index 000000000..f0bea4e7f
 +import {
 +    ClassType,
 +    FunctionType,
++    TypeBase,
 +    TypeCategory,
 +    UnknownType,
 +    getTypeAliasInfo,
++    isAnyOrUnknown,
 +    isFunction,
 +    isModule,
 +    isOverloaded,
@@ -432,7 +434,7 @@ index 000000000..f0bea4e7f
 +                    case 'str':
 +                    case 'str | None':
 +                    case 'int':
-+                    case 'Iterable[str]':
++                    case 'MutableSequence[str]':
 +                    case 'Dict[str, Any]': {
 +                        declarationType = TokenType.variable;
 +                        break;
@@ -481,6 +483,10 @@ index 000000000..f0bea4e7f
 +                // the type alias when printing the type information.
 +                const type = this._evaluator.getType(typeNode);
 +
++                if (type && !isAnyOrUnknown(type) && TypeBase.isInstantiable(type)) {
++                    declarationType = TokenType.type;
++                    break;
++                }
 +                if (type?.props?.typeAliasInfo && typeNode.nodeType === ParseNodeType.Name) {
 +                    const typeAliasInfo = getTypeAliasInfo(type);
 +                    if (typeAliasInfo?.shared.name === typeNode.d.value) {

@@ -14,7 +14,8 @@ struct Abc {
   std::string c;
 
   operator bool() const {
-    return a != 0;
+    auto lambda = []<typename TSelf>(TSelf self) { return self.a != 0; };
+    return lambda(*this);
   }
 };
 
