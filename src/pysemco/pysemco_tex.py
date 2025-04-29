@@ -74,6 +74,7 @@ def run_texify_partial(args: Namespace):
     lines = tokens.txt.splitlines()
 
     txt: str = args.txt
+    txt = txt.strip()
     occs = [
         (i, j, j + len(txt))
         for i, l in enumerate(lines)
