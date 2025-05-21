@@ -2,7 +2,7 @@ import json
 from argparse import ArgumentParser, Namespace
 from dataclasses import replace
 from pathlib import Path
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 import yaml
 
@@ -55,14 +55,32 @@ def run_texify(args: Namespace):
         tokens = deserialize(json.load(f), SemanticTokens)
 
     params = convert_params(args.params)
-
+    assert isinstance(params, dict)
     latex_lines = to_latex(SemanticTokens(tokens.txt, tokens.toks))
+
+    def apply_line_range(line_range: list[Any]):
+        if len(line_range) == 2:
+            begin, end = line_range
+            if isinstance(begin, int) and isinstance(end, int):
+                return latex_lines[begin:end]
+        lines: list[str] = []
+        for r in line_range:
+            assert isinstance(r, list) and len(r) == 2
+            begin, end = r
+            assert isinstance(begin, int) and isinstance(end, int)
+            lines.extend(latex_lines[begin:end])
+        return lines
+
     if (end := params.get("LineEnd")) is not None:
         assert isinstance(end, int)
         latex_lines = latex_lines[:end]
     if (begin := params.get("LineBegin")) is not None:
         assert isinstance(begin, int)
         latex_lines = latex_lines[begin:]
+    if (line_range := params.get("LineRange")) is not None:
+        assert "LineBegin" not in params and "LineEnd" not in params
+        assert isinstance(line_range, list)
+        latex_lines = apply_line_range(line_range)
 
     with open(args.out_path, "w") as f:
         print(latex_line_merge(latex_lines), file=f)
