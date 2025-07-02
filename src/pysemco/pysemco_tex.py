@@ -117,12 +117,18 @@ def run_texify_partial(args: Namespace):
             [
                 t
                 for t in tokens.toks
-                if t.line == line and t.start >= start and t.end <= end
+                if t.line == line
+                and t.start >= start
+                and t.end <= end
+                and t.token_type not in ("unknown",)
             ],
             [
                 t.limited(start, end)
                 for t in tokens.toks
-                if t.line == line and t.start < end and t.end > start
+                if t.line == line
+                and t.start < end
+                and t.end > start
+                and t.token_type not in ("unknown",)
             ],
         )
         for line, start, end in occs
