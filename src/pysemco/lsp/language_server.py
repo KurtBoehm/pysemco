@@ -79,11 +79,11 @@ class LanguageServer(_LanguageServer):
         file: Path,
         contents: str | None = None,
     ) -> SemanticTokens | None:
-        """Compute and convert semantic tokens for the given file using the given LSP."""
+        """Compute and convert semantic tokens for the given file."""
 
         if not self.server_started:
             self.logger.log(
-                "find_function_definition called before Language Server started",
+                "semantic_tokens called before Language Server started",
                 logging.ERROR,
             )
             raise MultilspyException("Language Server not started")
