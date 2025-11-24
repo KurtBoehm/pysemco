@@ -94,8 +94,3 @@ class ClangdServer(LanguageServer):
 
             await self.server.shutdown()
             await self.server.stop()
-
-    async def semantic_tokens_full(self, p: Path) -> SemanticTokens | None:
-        return await self.server.send.semantic_tokens_full(
-            {"textDocument": {"uri": p.as_uri()}}
-        )
