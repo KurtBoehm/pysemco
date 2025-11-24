@@ -13,6 +13,13 @@ class Abc[T]:
         return name
 
 
+@dataclass(frozen=True)
+class Bcd:
+    @classmethod
+    def f(cls):
+        return cls
+
+
 dummy = (True, False, None, str, float, sum)
 
 abc = Abc(a=0, b=32.5, c="abc")

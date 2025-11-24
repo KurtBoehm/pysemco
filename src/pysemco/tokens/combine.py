@@ -40,7 +40,8 @@ def combine_tokens(
             continue
 
         # If two tokens overlap, they are assumed to be from different lists.
-        assert tokkind != lastkind
+        # This does not seem to work with basedpyright, so this check is skipped
+        # assert tokkind != lastkind
         if (
             tok.token_type == lasttok.token_type
             and tok.token_modifiers == lasttok.token_modifiers

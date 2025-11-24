@@ -1,10 +1,8 @@
 import subprocess
+import sys
 import tarfile
-from importlib.resources import files
 from io import BytesIO
-from pathlib import Path
 from shutil import rmtree
-from tempfile import TemporaryDirectory
 
 import requests
 
@@ -20,7 +18,7 @@ def _get_dir(log: bool):
             print("pyright is up to date!")
         return data_path / f"pyright-{verch.version}"
 
-    repo = github().get_repo("microsoft/pyright")
+    repo = github().get_repo("DetachHead/basedpyright")
     tarball = repo.get_latest_release().tarball_url
     version = tarball.rsplit("/", 1)[-1]
     if verch is not None and verch.version == version:
@@ -47,22 +45,22 @@ def _get_dir(log: bool):
         p.rename(dir / p.relative_to(subdir))
     subdir.rmdir()
 
-    with TemporaryDirectory() as tmp:
-        version_parts = [int(p) for p in version.split(".")]
-        patch_name = (
-            "pyright.patch" if version_parts > [1, 1, 396] else "pyright-396.patch"
-        )
-        patch = files() / patch_name
-        tmp_patch = Path(tmp) / patch_name
-        with patch.open("r") as inf, open(tmp_patch, "w") as outf:
-            outf.write(inf.read())
-        subprocess.run(["git", "apply", tmp_patch], cwd=dir, check=True)
+    subprocess.run([sys.executable, "-m", "pip", "install", "docify"], check=True)
+    subprocess.run(
+        [sys.executable, "build/py3_8/generate_docstubs.py"],
+        cwd=dir,
+        check=True,
+    )
+
+    print("!" * 100 + "npm ci")
     subprocess.run(["npm", "ci"], cwd=dir, check=True)
+    print("!" * 100 + "npm run")
     subprocess.run(
         ["npm", "run", "build"],
         cwd=dir / "packages" / "pyright",
         check=True,
     )
+    print("!" * 100 + "npm post")
 
     update_version("pyright", version)
 

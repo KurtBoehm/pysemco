@@ -20,7 +20,6 @@ dependencies = [
 
 [tool.setuptools.package-data]
 "pysemco.lsp" = ["clangd_params.json", "pyright_params.json"]
-"pysemco.lsp.download" = ["pyright-396.patch", "pyright.patch"]
 
 [project.scripts]
 pysemco_tex = "pysemco.pysemco_tex:run"

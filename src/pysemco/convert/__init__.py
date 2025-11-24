@@ -1,3 +1,9 @@
-from .ansi import ansi_style_colorful, to_ansi
-from .html import HtmlDisplay, html_div, html_style_google, to_html
-from .latex import latex_line_merge, latex_token, to_latex
+from .ansi import ansi_style_colorful as ansi_style_colorful
+from .ansi import to_ansi as to_ansi
+from .html import HtmlDisplay as HtmlDisplay
+from .html import html_div as html_div
+from .html import html_style_google as html_style_google
+from .html import to_html as to_html
+from .latex import latex_line_merge as latex_line_merge
+from .latex import latex_token as latex_token
+from .latex import to_latex as to_latex

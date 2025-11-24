@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from .combine import combine_tokens
-from .defs import SemanticTokens, StrPath
+from .defs import SemanticToken, SemanticTokens, StrPath
 from .semantic import semantic_tokens
 
 
@@ -79,9 +79,16 @@ async def compute_tokens_python(
         with open(file, "r") as f:
             txt = f.read()
 
+    def map_pyright(tok: SemanticToken):
+        if tok.token_type == "selfParameter":
+            tok.token_type = "parameter"
+        return tok
+
     tokens_pyright = await semantic_tokens(
         PyrightServer(MultilspyLogger(), root, log_lsp=log_lsp), file, txt
     )
+    tokens_pyright = [map_pyright(tok) for tok in tokens_pyright]
+
     tokens_pygments = pygments_tokens("python", txt)
     return SemanticTokens(txt, combine_tokens(tokens_pyright, tokens_pygments))
 
