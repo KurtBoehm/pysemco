@@ -184,7 +184,7 @@ def run_texify_minimal_file(args: Namespace):
 def run():
     parser = ArgumentParser(
         description="Run the pysemco tools, which can analyze source code "
-        "and convert it to LaTeX SemCo code."
+        + "and convert it to LaTeX SemCo code."
     )
     subparsers = parser.add_subparsers(dest="cmd")
 
@@ -199,8 +199,8 @@ def run():
         "-c",
         action="store_true",
         help="If there is no stored analysis or the analysis is no longer applicable "
-        "because the source code has changed, remove all cached “.tex” files "
-        "as well as the “.cache” file in the parent folder of “out_path”.",
+        + "because the source code has changed, remove all cached “.tex” files "
+        + "as well as the “.cache” file in the parent folder of “out_path”.",
     )
     analyze_parser.add_argument(
         "language",
@@ -220,9 +220,9 @@ def run():
         "out_path",
         type=Path,
         help="The path to store the analysis at. "
-        "If there is already a file at this path, it is treated as the result of"
-        "an earlier analysis and, if the stored source code is the same as "
-        "the contents of the source file, the existing analysis is re-used.",
+        + "If there is already a file at this path, it is treated as the result of"
+        + "an earlier analysis and, if the stored source code is the same as "
+        + "the contents of the source file, the existing analysis is re-used.",
     )
 
     texify_parser = subparsers.add_parser(
@@ -247,13 +247,13 @@ def run():
     texify_part_parser = subparsers.add_parser(
         "texify_partial",
         help="Convert an occurrence of a given code segment in the result of “analyze” "
-        "to LaTeX SemCo code.",
+        + "to LaTeX SemCo code.",
     )
     texify_part_parser.add_argument(
         "--index",
         type=int,
         help="The index of the occurrence to use. If no index is given, "
-        "the program fails if there are multiple occurrences.",
+        + "the program fails if there are multiple occurrences.",
     )
     texify_part_parser.add_argument(
         "in_path",

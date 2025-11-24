@@ -1,3 +1,3 @@
-from .clangd import ClangdServer
-from .language_server import LanguageServer
-from .pyright import PyrightServer
+from .clangd import ClangdServer as ClangdServer
+from .language_server import LanguageServer as LanguageServer
+from .pyright import PyrightServer as PyrightServer

@@ -1,4 +1,5 @@
 import re
+from typing import Callable, Final, final, override
 
 import pygments.token as token
 from pygments import lex
@@ -10,6 +11,11 @@ from pygments.lexers.python import PythonLexer as _PythonLexer
 from .defs import SemanticToken, combine_tokens
 
 
+TokenType = token._TokenType  # pyright: ignore[reportPrivateUsage]
+_is_token_subtype: Callable[[TokenType, TokenType], bool] = token.is_token_subtype
+
+
+@final
 class NasmLexer(RegexLexer):
     """A nasm lexer based on pygments.lexers.asm.NasmLexer."""
 
@@ -94,6 +100,7 @@ class NasmLexer(RegexLexer):
         ],
     }
 
+    @override
     def get_tokens(self, text: str, unfiltered: bool = False):
         """Fix up labels in the existing tokens."""
         # Store all labels without the terminating colon
@@ -114,7 +121,7 @@ class NasmLexer(RegexLexer):
 
 
 class CppLexer(_CppLexer):
-    _keyword_kinds = {
+    _keyword_kinds: Final = {
         "auto": token.Keyword.Type,
         "bool": token.Keyword.Type,
         "char": token.Keyword.Type,
@@ -136,12 +143,13 @@ class CppLexer(_CppLexer):
         "this": token.Keyword.Constant,
         "operator": token.Keyword.Operator,
     }
-    _builtin_kinds = {
+    _builtin_kinds: Final = {
         "false": token.Keyword.Constant,
         "true": token.Keyword.Constant,
         "NULL": token.Name.Macro,
     }
 
+    @override
     def get_tokens(self, text: str, unfiltered: bool = False):
         """Replace the `Keyword` token kind with a more specific sub-kind."""
         for ttype, tstr in super().get_tokens(text, unfiltered):
@@ -154,13 +162,14 @@ class CppLexer(_CppLexer):
 
 
 class CppAlgLexer(CppLexer):
-    tokens = {
+    tokens: Final = {
         "keywords": [
             inherit,
             (words(("parallel", "process"), suffix=r"\b"), token.Keyword),
         ],
     }
 
+    @override
     def get_tokens(self, text: str, unfiltered: bool = False):
         """Replace the `Keyword` token kind with a more specific sub-kind."""
         for ttype, tstr in super().get_tokens(text, unfiltered):
@@ -173,6 +182,7 @@ class CppAlgLexer(CppLexer):
 
 
 class PythonLexer(_PythonLexer):
+    @override
     def get_tokens(self, text: str, unfiltered: bool = False):
         """Replace the `Keyword` token kind with a more specific sub-kind."""
         for ttype, tstr in super().get_tokens(text, unfiltered):
@@ -218,55 +228,55 @@ def pygments_tokens(
         curtxt += tokstr
 
         if (
-            token.is_token_subtype(tok, token.Name)
+            _is_token_subtype(tok, token.Name)
             and (t := name_map.get(tokstr)) is not None
         ):
             addtok(t)
             continue
-        if token.is_token_subtype(tok, token.Name.Attribute):
+        if _is_token_subtype(tok, token.Name.Attribute):
             addtok("attribute")
             continue
-        if token.is_token_subtype(tok, token.Name.Function):
+        if _is_token_subtype(tok, token.Name.Function):
             addtok("function")
             continue
-        if token.is_token_subtype(tok, token.Name.Variable):
+        if _is_token_subtype(tok, token.Name.Variable):
             addtok("variable")
             continue
-        if token.is_token_subtype(tok, token.Name.Label):
+        if _is_token_subtype(tok, token.Name.Label):
             addtok("label")
             continue
-        if token.is_token_subtype(tok, token.Name.Macro):
+        if _is_token_subtype(tok, token.Name.Macro):
             addtok("macro")
             continue
-        if token.is_token_subtype(tok, token.Comment.Preproc):
+        if _is_token_subtype(tok, token.Comment.Preproc):
             addtok("preprocessor")
             continue
-        if token.is_token_subtype(tok, token.Comment.PreprocFile):
+        if _is_token_subtype(tok, token.Comment.PreprocFile):
             addtok("literal-include")
             continue
-        if token.is_token_subtype(tok, token.Comment):
+        if _is_token_subtype(tok, token.Comment):
             addtok("comment")
             continue
-        if token.is_token_subtype(tok, token.Keyword.Type):
+        if _is_token_subtype(tok, token.Keyword.Type):
             addtok("keyword-type")
             continue
-        if token.is_token_subtype(tok, token.Keyword.Constant):
+        if _is_token_subtype(tok, token.Keyword.Constant):
             addtok("keyword-value")
             continue
-        if token.is_token_subtype(tok, token.Keyword.Operator):
+        if _is_token_subtype(tok, token.Keyword.Operator):
             addtok("keyword-fun")
             continue
-        if token.is_token_subtype(tok, token.Keyword):
+        if _is_token_subtype(tok, token.Keyword):
             addtok("keyword")
             continue
-        if token.is_token_subtype(tok, token.Name.Namespace):
+        if _is_token_subtype(tok, token.Name.Namespace):
             addtok("namespace")
             continue
-        if token.is_token_subtype(tok, token.Name.Decorator):
+        if _is_token_subtype(tok, token.Name.Decorator):
             addtok("decorator")
             continue
         if any(
-            token.is_token_subtype(tok, k)
+            _is_token_subtype(tok, k)
             for k in (
                 token.Literal.Number.Bin,
                 token.Literal.Number.Hex,
@@ -275,19 +285,19 @@ def pygments_tokens(
         ):
             addtok("literal-int")
             continue
-        if token.is_token_subtype(tok, token.Literal.Number.Float):
+        if _is_token_subtype(tok, token.Literal.Number.Float):
             addtok("literal-float")
             continue
-        if token.is_token_subtype(tok, token.Literal.String.Affix):
+        if _is_token_subtype(tok, token.Literal.String.Affix):
             addtok("literal-affix")
             continue
-        if token.is_token_subtype(tok, token.Literal.String.Interpol):
+        if _is_token_subtype(tok, token.Literal.String.Interpol):
             continue
-        if token.is_token_subtype(tok, token.Literal.String):
+        if _is_token_subtype(tok, token.Literal.String):
             addtok("literal-string")
             continue
         if any(
-            token.is_token_subtype(tok, k)
+            _is_token_subtype(tok, k)
             for k in (
                 token.Text,
                 token.Punctuation,

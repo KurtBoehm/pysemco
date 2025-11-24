@@ -1,6 +1,6 @@
 # `pysemco`: Source Code Tokenization using LSPs and Pygments
 
-`pysemco` provides tools to tokenize source code in C++, Python, and x86-64 assembly in Intel syntax using Pygments for basic tokens together with `clangd` (C++) or a patched version of Pyright (Python) for semantic tokens.
+`pysemco` provides tools to tokenize source code in C++, Python, and x86-64 assembly in Intel syntax using Pygments for basic tokens together with `clangd` (C++) or `basedpyright` (Python) for semantic tokens.
 The language servers are downloaded and updated automatically upon their use.
 
 Currently, there are three converters into different formats, each with a demo in the `demo` subfolder:

@@ -29,7 +29,7 @@ def combine_tokens(
     out = [comb.pop(0)]
     for tok, tokkind in comb:
         # Get the preceding token and its kind.
-        lasttok, lastkind = out[-1]
+        lasttok, _lastkind = out[-1]
 
         if tok == lasttok:
             # Skip duplicate tokens.
