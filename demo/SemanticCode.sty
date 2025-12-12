@@ -293,7 +293,7 @@
 % #3: root
 % #4: file name relative to root
 \NewDocumentCommand{\SemCoAnalyze}{m m m m}{%
-  \sys_shell_now:n{.semco/venv/bin/pysemco_tex ~ analyze ~ --clear-cache ~ #1 ~ "#3" ~ "#3/#4" ~ ".semco/#2.json"}%
+  \sys_shell_now:e{.semco/venv/bin/pysemco_tex ~ analyze ~ #1 ~ "#3" ~ "#3/#4" ~ ".semco/#2.json"}%
 }
 
 % #1: additional parameters
@@ -342,8 +342,6 @@
 }{%
   \endVerbatimOut%
   \semco_setup_vrb:%
-  \tl_set:Nn\g_semco_file_name{.semco/#2}%
-  \sys_shell_now:e{mv ~ -f ~ "\g_semco_vrb_path" ~ "\g_semco_file_name"}%
+  \SemCoAnalyze{#1}{#2}{\g_semco_output_dir}{\semco_vrb_name:}%
   \semco_clean_vrb:{}%
-  \SemCoAnalyze{#1}{#2}{.semco}{#2}%
 }

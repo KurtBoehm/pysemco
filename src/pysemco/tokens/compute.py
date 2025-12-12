@@ -80,7 +80,7 @@ async def compute_tokens_python(
             txt = f.read()
 
     def map_pyright(tok: SemanticToken):
-        if tok.token_type == "selfParameter":
+        if tok.token_type in ("selfParameter", "clsParameter"):
             tok.token_type = "parameter"
         return tok
 

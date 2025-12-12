@@ -28,11 +28,6 @@ def run_analyze(args: Namespace):
     dst: Path = args.out_path.resolve()
 
     def save_tokens(txt: str | None = None):
-        if args.clear_cache:
-            for p in dst.parent.iterdir():
-                if p.suffix == ".tex":
-                    p.unlink()
-
         if txt is None:
             with open(src, "r") as f:
                 txt = f.read()
@@ -205,14 +200,6 @@ def run():
     analyze_parser = subparsers.add_parser(
         "analyze",
         help="Analyze source code and save the resulting tokens for later use.",
-    )
-    analyze_parser.add_argument(
-        "--clear-cache",
-        "-c",
-        action="store_true",
-        help="If there is no stored analysis or the analysis is no longer applicable "
-        + "because the source code has changed, remove all cached “.tex” files "
-        + "in the parent folder of “out_path”.",
     )
     analyze_parser.add_argument(
         "language",
