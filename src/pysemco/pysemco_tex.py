@@ -1,10 +1,8 @@
 from argparse import ArgumentParser, Namespace
-from dataclasses import replace
 from pathlib import Path
 from typing import Any, NamedTuple
 
 from .convert import latex_line_merge, to_latex
-from .serialization import deserialize, serialize
 from .tokens import (
     SemanticToken,
     SemanticTokens,
@@ -41,13 +39,13 @@ def run_analyze(args: Namespace):
 
         tokens = compute_tokens_sync(args.language, root, src, txt, log_lsp=True)
         with open(dst, "w") as f:
-            json.dump(serialize(tokens), f)
+            json.dump(tokens.json, f)
 
     if dst.exists():
         with open(src, "r") as f:
             txt = f.read()
         with open(dst, "r") as f:
-            tokens = deserialize(json.load(f), SemanticTokens)
+            tokens = SemanticTokens.from_json(json.load(f))
         if txt != tokens.txt:
             save_tokens(txt)
     else:
@@ -58,7 +56,7 @@ def run_texify(args: Namespace):
     import json
 
     with open(args.in_path, "r") as f:
-        tokens = deserialize(json.load(f), SemanticTokens)
+        tokens = SemanticTokens.from_json(json.load(f))
 
     params = convert_params(args.params)
     assert isinstance(params, dict)
@@ -96,10 +94,11 @@ def run_texify_partial(args: Namespace):
     import json
 
     with open(args.in_path, "r") as f:
-        tokens = deserialize(json.load(f), SemanticTokens)
+        tokens = SemanticTokens.from_json(json.load(f))
     lines = tokens.txt.splitlines()
 
-    txt: str = args.txt
+    with open(args.src, "r") as f:
+        txt = f.read()
     txt = txt.strip()
     occs = [
         (i, j, j + len(txt))
@@ -145,7 +144,16 @@ def run_texify_partial(args: Namespace):
         tokens = singles
 
     def latex(start: int, toks: list[SemanticToken]):
-        toks = [replace(t, line=0, start=t.start - start) for t in toks]
+        toks = [
+            SemanticToken(
+                line=0,
+                start=t.start - start,
+                length=t.length,
+                token_type=t.token_type,
+                token_modifiers=t.token_modifiers,
+            )
+            for t in toks
+        ]
         (out,) = to_latex(SemanticTokens(txt, toks), space=False)
         return out
 
@@ -160,8 +168,7 @@ def run_texify_partial(args: Namespace):
         assert len(outset) == 1, f"Invalid number of variants for {txt}: {outset}"
         (out,) = outset
 
-    with open(args.out_path, "w") as f:
-        print(f"{out}%", file=f)
+    print(f"{out}%")
 
 
 def run_texify_minimal(args: Namespace):
@@ -267,13 +274,8 @@ def run():
         help="The path to the analysis produced by “analyze”.",
     )
     texify_part_parser.add_argument(
-        "txt",
-        help="The code segment to convert.",
-    )
-    texify_part_parser.add_argument(
-        "out_path",
-        type=Path,
-        help="The path to store the LaTeX SemCo code at.",
+        "src",
+        help="The file containing the code segment to convert.",
     )
 
     texify_mini_parser = subparsers.add_parser(

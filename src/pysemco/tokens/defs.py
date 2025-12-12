@@ -1,10 +1,10 @@
-from dataclasses import dataclass, replace
 from os import PathLike
+from typing import Any, final
 
 StrPath = str | PathLike[str]
 
 
-@dataclass
+@final
 class SemanticToken:
     """The information contained in an LSP semantic token.
 
@@ -12,11 +12,19 @@ class SemanticToken:
     Note: Changing `start` also changes `end` because `length` remains unchanged.
     """
 
-    line: int
-    start: int
-    length: int
-    token_type: str
-    token_modifiers: list[str]
+    def __init__(
+        self,
+        line: int,
+        start: int,
+        length: int,
+        token_type: str,
+        token_modifiers: list[str],
+    ):
+        self.line = line
+        self.start = start
+        self.length = length
+        self.token_type = token_type
+        self.token_modifiers = token_modifiers
 
     @property
     def end(self):
@@ -42,15 +50,41 @@ class SemanticToken:
         )
 
     def with_token_type(self, t: str):
-        return replace(self, token_type=t)
+        return SemanticToken(
+            line=self.line,
+            start=self.start,
+            length=self.length,
+            token_type=t,
+            token_modifiers=self.token_modifiers,
+        )
+
+    @staticmethod
+    def from_json(json: dict[str, Any]) -> "SemanticToken":
+        return SemanticToken(**json)
+
+    @property
+    def json(self):
+        return self.__dict__
 
 
-@dataclass
+@final
 class SemanticTokens:
     """A list of semantic tokens together with the corresponding code."""
 
-    txt: str
-    toks: list[SemanticToken]
+    def __init__(self, txt: str, toks: list[SemanticToken]):
+        self.txt = txt
+        self.toks = toks
+
+    @staticmethod
+    def from_json(json: dict[str, Any]) -> "SemanticTokens":
+        return SemanticTokens(
+            txt=json["txt"],
+            toks=[SemanticToken.from_json(t) for t in json["toks"]],
+        )
+
+    @property
+    def json(self):
+        return {"txt": self.txt, "toks": [t.json for t in self.toks]}
 
 
 def combine_tokens(toks: list[SemanticToken]) -> list[SemanticToken]:

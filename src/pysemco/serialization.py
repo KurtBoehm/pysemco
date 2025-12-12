@@ -46,21 +46,21 @@ def deserialize[T](obj: Any, typ: type[T]) -> T:
         assert isinstance(obj, dict)
         data: dict[str, Any] = {}
         for f in fields(typ):
-            data[f.name] = deserialize(obj[f.name], f.type)  # type: ignore
+            data[f.name] = deserialize(obj[f.name], f.type)  # pyright: ignore
         return typ(**data)
     if (elem := list_type(typ)) is not None:
         assert isinstance(obj, list)
-        return [deserialize(v, elem) for v in obj]  # type: ignore
+        return [deserialize(v, elem) for v in obj]  # pyright: ignore
     if (kv := dict_types(typ)) is not None:
         assert isinstance(obj, dict)
         kt, vt = kv
         assert kt is str
-        return {k: deserialize(v, vt) for k, v in obj.items()}  # type: ignore
+        return {k: deserialize(v, vt) for k, v in obj.items()}  # pyright: ignore
     if typ is datetime:
         assert isinstance(obj, str)
-        return datetime.fromisoformat(obj)  # type: ignore
+        return datetime.fromisoformat(obj)  # pyright: ignore
     if typ is Path:
         assert isinstance(obj, str)
-        return Path(obj)  # type: ignore
+        return Path(obj)  # pyright: ignore
     assert isinstance(obj, typ)
-    return obj  # type: ignore
+    return obj  # pyright: ignore

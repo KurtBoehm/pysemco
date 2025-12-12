@@ -94,13 +94,7 @@
     \tl_if_eq:NnT#2{\par}{\tl_set:Nn#2{.}}%
   }%
 }
-\cs_new:Nn\env_query_path:N{
-  \tl_if_exist:NF\g_env_output_dir_tl{%
-    \tl_new:N\g_env_output_dir_tl%
-    \env_query_path:nN{TEXMF_OUTPUT_DIRECTORY}\g_env_output_dir_tl%
-  }%
-  \tl_set_eq:NN#1\g_env_output_dir_tl%
-}
+\cs_new:Nn\env_query_path:N{\env_query_path:nN{TEXMF_OUTPUT_DIRECTORY}#1}
 
 \prop_new:N\g_semco_style_prop
 \prop_new:N\g_semco_styles_prop
@@ -307,36 +301,21 @@
   \sys_shell_now:n{.semco/venv/bin/pysemco_tex ~ analyze ~ --clear-cache ~ #1 ~ "#3" ~ "#3/#4" ~ ".semco/#2.json"}%
 }
 
-% #1: code name
+% #1: additional parameters
+% #2: code name
 \NewDocumentCommand{\SemCoInput}{O{} m}{%
   \sys_shell_now:n{.semco/venv/bin/pysemco_tex ~ texify ~ "#1" ~ ".semco/#2.json" ~ ".semco/#2.tex"}%
   \begin{SemCoFormatEnv}\file_input:n{.semco/#2.tex}\end{SemCoFormatEnv}%
 }
 
-\cs_new:Nn\semco_input_part_work:nnnn{%
-  \sys_shell_now:e{.semco/venv/bin/pysemco_tex ~ texify_partial ~ \IfValueT{#1}{--index ~ #1} ~ ".semco/#2.json" ~ "#3" ~ #4}%
-  \prop_gput:Nxx\g_semco_part_prop{{#1}{#2}{#3}}{#4}%
-  \file_input:n{#4}%
-  \sys_shell_now:e{echo ~ '\string\@semco@store@part@cache\IfValueT{#1}{{#1}}{#2}{#3}{#4}' ~ >> ~ .semco/.cache}%
-  \int_gincr:N\g_semco_tmp_cntr%
-}
 % #1: index of occurrence
 % #2: code name
 % #3: part
 \NewDocumentCommand{\SemCoInputPart}{o m m}{%
-  \SemCoFormatInline{%
-    \prop_get:NxNTF\g_semco_part_prop{{#1}{#2}{#3}}\g_semco_file_name{%
-      % if in cache: read existing file if it exists, recompute otherwise
-      \file_if_exist:nTF{\tl_use:N\g_semco_file_name}{%
-        \file_input:n{\tl_use:N\g_semco_file_name}%
-      }{%
-        \semco_input_part_work:nnnn{#1}{#2}{#3}{\tl_use:N\g_semco_file_name}%
-      }%
-    }{%
-      % compute
-      \semco_input_part_work:nnnn{#1}{#2}{#3}{\semco_tmp_name:}%
-    }%
-  }%
+  \semco_write_vrb:n{#3}%
+  \sys_get_shell:enN{.semco/venv/bin/pysemco_tex ~ texify_partial ~ \IfValueT{#1}{--index ~ #1} ~ '.semco/#2.json' ~ '\g_semco_vrb_path'}{}\g_tmpa_tl%
+  \semco_clean_vrb:{}%
+  \SemCoFormatInline{\tl_use:N\g_tmpa_tl}%
 }
 
 % Set \g_semco_vrb_path to the path of the VRB file
