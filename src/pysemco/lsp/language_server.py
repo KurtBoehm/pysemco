@@ -1,7 +1,7 @@
 import logging
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path, PurePath
-from typing import Iterator
 
 from multilspy.language_server import FileUtils
 from multilspy.language_server import LanguageServer as _LanguageServer

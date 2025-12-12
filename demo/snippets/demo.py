@@ -10,7 +10,7 @@ class Abc[T]:
     c: str | None
 
     def __getattr__(self, name: str):
-        return name
+        return f'get attr {name}'
 
 
 @dataclass(frozen=True)

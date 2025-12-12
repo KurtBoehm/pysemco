@@ -10,7 +10,6 @@ from pygments.lexers.python import PythonLexer as _PythonLexer
 
 from .defs import SemanticToken, combine_tokens
 
-
 TokenType = token._TokenType  # pyright: ignore[reportPrivateUsage]
 _is_token_subtype: Callable[[TokenType, TokenType], bool] = token.is_token_subtype
 

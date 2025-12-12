@@ -52,15 +52,12 @@ def _get_dir(log: bool):
         check=True,
     )
 
-    print("!" * 100 + "npm ci")
     subprocess.run(["npm", "ci"], cwd=dir, check=True)
-    print("!" * 100 + "npm run")
     subprocess.run(
         ["npm", "run", "build"],
         cwd=dir / "packages" / "pyright",
         check=True,
     )
-    print("!" * 100 + "npm post")
 
     update_version("pyright", version)
 

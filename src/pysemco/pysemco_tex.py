@@ -1,10 +1,7 @@
-import json
 from argparse import ArgumentParser, Namespace
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, NamedTuple
-
-import yaml
 
 from .convert import latex_line_merge, to_latex
 from .serialization import deserialize, serialize
@@ -17,10 +14,17 @@ from .tokens import (
 
 
 def convert_params(pstr: str):
-    return yaml.safe_load(f"{{{pstr}}}")
+    if pstr == "{}":
+        return {}
+    else:
+        import yaml
+
+        return yaml.safe_load(f"{{{pstr}}}")
 
 
 def run_analyze(args: Namespace):
+    import json
+
     root: Path = args.root_path.resolve()
     src: Path = args.in_path.resolve()
     dst: Path = args.out_path.resolve()
@@ -51,6 +55,8 @@ def run_analyze(args: Namespace):
 
 
 def run_texify(args: Namespace):
+    import json
+
     with open(args.in_path, "r") as f:
         tokens = deserialize(json.load(f), SemanticTokens)
 
@@ -87,6 +93,8 @@ def run_texify(args: Namespace):
 
 
 def run_texify_partial(args: Namespace):
+    import json
+
     with open(args.in_path, "r") as f:
         tokens = deserialize(json.load(f), SemanticTokens)
     lines = tokens.txt.splitlines()
@@ -157,15 +165,14 @@ def run_texify_partial(args: Namespace):
 
 
 def run_texify_minimal(args: Namespace):
-    (out,) = to_latex(
-        SemanticTokens(args.txt, compute_minimal_tokens(args.language, args.txt))
-    )
-    with open(args.out_path, "w") as f:
-        print(f"{out}%", file=f)
+    with open(args.src, "r") as f:
+        txt = f.read()
+    (out,) = to_latex(SemanticTokens(txt, compute_minimal_tokens(args.language, txt)))
+    print(f"{out}%")
 
 
 def run_texify_minimal_file(args: Namespace):
-    with open(args.in_path, "r") as f:
+    with open(args.src, "r") as f:
         txt = f.read()
     params = convert_params(args.params)
     name_map = params.get("NameMap")
@@ -177,8 +184,7 @@ def run_texify_minimal_file(args: Namespace):
             compute_minimal_tokens(args.language, txt, name_map=name_map),
         )
     )
-    with open(args.out_path, "w") as f:
-        print(latex_line_merge(latex_lines), file=f)
+    print(latex_line_merge(latex_lines))
 
 
 def run():
@@ -279,13 +285,8 @@ def run():
         help="The programming language used in the source code.",
     )
     texify_mini_parser.add_argument(
-        "txt",
-        help="The source code to convert.",
-    )
-    texify_mini_parser.add_argument(
-        "out_path",
-        type=Path,
-        help="The path to store the LaTeX SemCo code at.",
+        "src",
+        help="The source file to convert.",
     )
 
     texify_mini_file_parser = subparsers.add_parser(
@@ -301,14 +302,9 @@ def run():
         help="The programming language used in the source code.",
     )
     texify_mini_file_parser.add_argument(
-        "in_path",
+        "src",
         type=Path,
         help="The path to the source code.",
-    )
-    texify_mini_file_parser.add_argument(
-        "out_path",
-        type=Path,
-        help="The path to store the LaTeX SemCo code at.",
     )
 
     args = parser.parse_args()

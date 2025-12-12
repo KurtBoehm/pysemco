@@ -1,5 +1,3 @@
-from copy import deepcopy
-
 from .defs import SemanticToken
 
 
@@ -16,6 +14,8 @@ def combine_tokens(
         primary: The primary tokens.
         secondary: The secondary tokens.
     """
+
+    from copy import deepcopy
 
     # Merge the two lists and sort the tokens lexicographically according to
     # (line, starting column, ending column).

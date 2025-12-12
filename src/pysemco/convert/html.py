@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from html import escape
 
 from pysemco.convert.colors import StyleDict, colorful
 
@@ -33,6 +32,8 @@ def to_html(
         tokens: The semantic tokens.
         token_style: A style to highlight the tokens with.
     """
+
+    from html import escape
 
     lines = tokens.txt.splitlines()
     html_lines: list[str] = []

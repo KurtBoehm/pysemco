@@ -1,17 +1,13 @@
 import json
 import logging
 import os
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from importlib.resources import files
 from pathlib import Path
-from typing import AsyncIterator
 
 from multilspy.language_server import Language
-from multilspy.lsp_protocol_handler.lsp_types import (
-    InitializeParams,
-    InitializeResult,
-    SemanticTokens,
-)
+from multilspy.lsp_protocol_handler.lsp_types import InitializeParams, InitializeResult
 from multilspy.lsp_protocol_handler.server import ProcessLaunchInfo
 from multilspy.multilspy_config import MultilspyConfig
 from multilspy.multilspy_logger import MultilspyLogger
