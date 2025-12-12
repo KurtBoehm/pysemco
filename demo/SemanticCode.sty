@@ -254,26 +254,11 @@
   \str_replace_all:Nnx#1{##}{\c_hash_str}%
 }
 
-\NewDocumentCommand{\@semco@store@part@cache}{o m m m}{%
-  \semco_tl_to_str:Nn\l_tmpa_str{#2}%
-  \sys_shell_now:e{echo ~ '\string\@semco@store@part@cache\IfValueT{#1}{{#1}}{\l_tmpa_str}{#3}{\semco_tmp_name:}' ~ >> ~ .semco/.cache.tmp}%
-  \prop_gput:Nee\g_semco_part_prop{{#1}{\l_tmpa_str}{#3}}{\semco_tmp_name:}%
-  \str_if_eq:eeF{#4}{\semco_tmp_name:}{\sys_shell_now:e{mv ~ "#4" ~ \semco_tmp_name:}}%
-  \int_gincr:N\g_semco_tmp_cntr%
-}
-\NewDocumentCommand{\@semco@store@mini@cache}{m m m}{%
-  \semco_tl_to_str:Nn\l_tmpa_str{#2}%
-  \sys_shell_now:e{echo ~ '\string\@semco@store@mini@cache{#1}{\l_tmpa_str}{\semco_tmp_name:}' ~ >> ~ .semco/.cache.tmp}%
-  \prop_gput:Nee\g_semco_mini_prop{{#1}{\l_tmpa_str}}{\semco_tmp_name:}%
-  \str_if_eq:eeF{#3}{\semco_tmp_name:}{\sys_shell_now:e{mv ~ "#3" ~ \semco_tmp_name:}}%
-  \int_gincr:N\g_semco_tmp_cntr%
-}
-
 \sys_shell_now:n{mkdir ~ -p ~ .semco}
 
 % Initialize/update if pysemco_tex does not exist or is more than 24 hours old
 \cs_new:Nn\semco_venv_init:{
-  \sys_shell_now:n{rm ~ -rf ~ .semco/* ~ .semco/.cache}
+  \sys_shell_now:n{rm ~ -rf ~ .semco/*}
   \sys_shell_now:n{python3 ~ -m ~ venv ~ .semco/venv}
   \sys_shell_now:n{./.semco/venv/bin/pip3 ~ install ~ -e ~ .}
 }
@@ -285,38 +270,6 @@
 }{\semco_venv_init:}
 
 \sys_shell_now:n{echo ~ "*" ~ > ~ .semco/.gitignore}
-\sys_shell_now:n{touch ~ .semco/.cache ~ .semco/.cache.tmp}
-
-\ExplSyntaxOff
-\input{.semco/.cache}
-\ExplSyntaxOn
-
-\sys_shell_now:n{mv ~ -f ~ .semco/.cache.tmp ~ .semco/.cache}
-
-% #1: language
-% #2: code name to refer to later
-% #3: root
-% #4: file name relative to root
-\NewDocumentCommand{\SemCoAnalyze}{m m m m}{%
-  \sys_shell_now:n{.semco/venv/bin/pysemco_tex ~ analyze ~ --clear-cache ~ #1 ~ "#3" ~ "#3/#4" ~ ".semco/#2.json"}%
-}
-
-% #1: additional parameters
-% #2: code name
-\NewDocumentCommand{\SemCoInput}{O{} m}{%
-  \sys_shell_now:n{.semco/venv/bin/pysemco_tex ~ texify ~ "#1" ~ ".semco/#2.json" ~ ".semco/#2.tex"}%
-  \begin{SemCoFormatEnv}\file_input:n{.semco/#2.tex}\end{SemCoFormatEnv}%
-}
-
-% #1: index of occurrence
-% #2: code name
-% #3: part
-\NewDocumentCommand{\SemCoInputPart}{o m m}{%
-  \semco_write_vrb:n{#3}%
-  \sys_get_shell:enN{.semco/venv/bin/pysemco_tex ~ texify_partial ~ \IfValueT{#1}{--index ~ #1} ~ '.semco/#2.json' ~ '\g_semco_vrb_path'}{}\g_tmpa_tl%
-  \semco_clean_vrb:{}%
-  \SemCoFormatInline{\tl_use:N\g_tmpa_tl}%
-}
 
 % Set \g_semco_vrb_path to the path of the VRB file
 \cs_new:Nn\semco_setup_vrb:{%
@@ -336,6 +289,31 @@
 }
 
 % #1: language
+% #2: code name to refer to later
+% #3: root
+% #4: file name relative to root
+\NewDocumentCommand{\SemCoAnalyze}{m m m m}{%
+  \sys_shell_now:n{.semco/venv/bin/pysemco_tex ~ analyze ~ --clear-cache ~ #1 ~ "#3" ~ "#3/#4" ~ ".semco/#2.json"}%
+}
+
+% #1: additional parameters
+% #2: code name
+\NewDocumentCommand{\SemCoInput}{O{} m}{%
+  \sys_get_shell:enN{.semco/venv/bin/pysemco_tex ~ texify ~ '#1' ~ '.semco/#2.json'}{}\g_tmpa_tl%
+  \begin{SemCoFormatEnv}\tl_use:N\g_tmpa_tl\end{SemCoFormatEnv}%
+}
+
+% #1: index of occurrence
+% #2: code name
+% #3: part
+\NewDocumentCommand{\SemCoInputPart}{o m m}{%
+  \semco_write_vrb:n{#3}%
+  \sys_get_shell:enN{.semco/venv/bin/pysemco_tex ~ texify_partial ~ \IfValueT{#1}{--index ~ #1} ~ '.semco/#2.json' ~ '\g_semco_vrb_path'}{}\g_tmpa_tl%
+  \semco_clean_vrb:{}%
+  \SemCoFormatInline{\tl_use:N\g_tmpa_tl}%
+}
+
+% #1: language
 % #2: code
 \NewDocumentCommand{\SemCoMini}{m m}{%
   \semco_write_vrb:n{#2}%
@@ -351,6 +329,7 @@
   \endVerbatimOut%
   \semco_setup_vrb:%
   \sys_get_shell:enN{.semco/venv/bin/pysemco_tex ~ texify_minimal_file ~ '#1' ~ '#2' ~ '\g_semco_vrb_path'}{}\g_tmpa_tl%
+  \semco_clean_vrb:{}%
   \begin{SemCoFormatEnv}%
     \tl_use:N\g_tmpa_tl%
   \end{SemCoFormatEnv}%
@@ -365,5 +344,6 @@
   \semco_setup_vrb:%
   \tl_set:Nn\g_semco_file_name{.semco/#2}%
   \sys_shell_now:e{mv ~ -f ~ "\g_semco_vrb_path" ~ "\g_semco_file_name"}%
+  \semco_clean_vrb:{}%
   \SemCoAnalyze{#1}{#2}{.semco}{#2}%
 }

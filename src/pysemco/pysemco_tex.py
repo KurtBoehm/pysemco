@@ -30,7 +30,7 @@ def run_analyze(args: Namespace):
     def save_tokens(txt: str | None = None):
         if args.clear_cache:
             for p in dst.parent.iterdir():
-                if p.suffix == ".tex" or p.name == ".cache":
+                if p.suffix == ".tex":
                     p.unlink()
 
         if txt is None:
@@ -86,8 +86,7 @@ def run_texify(args: Namespace):
         assert isinstance(line_range, list)
         latex_lines = apply_line_range(line_range)
 
-    with open(args.out_path, "w") as f:
-        print(latex_line_merge(latex_lines), file=f)
+    print(latex_line_merge(latex_lines))
 
 
 def run_texify_partial(args: Namespace):
@@ -213,7 +212,7 @@ def run():
         action="store_true",
         help="If there is no stored analysis or the analysis is no longer applicable "
         + "because the source code has changed, remove all cached “.tex” files "
-        + "as well as the “.cache” file in the parent folder of “out_path”.",
+        + "in the parent folder of “out_path”.",
     )
     analyze_parser.add_argument(
         "language",
@@ -250,11 +249,6 @@ def run():
         "in_path",
         type=Path,
         help="The path to the analysis produced by “analyze”.",
-    )
-    texify_parser.add_argument(
-        "out_path",
-        type=Path,
-        help="The path to store the LaTeX SemCo code at.",
     )
 
     texify_part_parser = subparsers.add_parser(
