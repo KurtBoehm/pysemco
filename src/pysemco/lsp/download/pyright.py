@@ -1,71 +1,55 @@
+from pathlib import Path
 import subprocess
 import sys
-import tarfile
-from io import BytesIO
 from shutil import rmtree
 
-import requests
+from pysemco.lsp.download.defs import data_path, update_version, version_check
 
-from pysemco.lsp.download.defs import data_path, github, update_version, version_check
+
+def _get_version(python: Path):
+    version_prog = "import importlib.metadata as m; print(m.version('basedpyright'))"
+    version = subprocess.run(
+        [python, "-c", version_prog],
+        check=True,
+        stdout=subprocess.PIPE,
+    )
+    return version.stdout.decode().strip()
 
 
 def _get_dir(log: bool):
     """Determine the path to store pyright at, optionally logging the LSP state."""
 
-    verch = version_check("pyright")
+    pyr_path = data_path / "basedpyright"
+
+    verch = version_check("basedpyright")
     if verch is not None and not verch.check:
         if log:
-            print("pyright is up to date!")
-        return data_path / f"pyright-{verch.version}"
+            print("basedpyright is up to date!")
+        return pyr_path
 
-    repo = github().get_repo("DetachHead/basedpyright")
-    tarball = repo.get_latest_release().tarball_url
-    version = tarball.rsplit("/", 1)[-1]
-    if verch is not None and verch.version == version:
+    python = pyr_path / "bin" / "python3"
+    if not python.exists():
+        if pyr_path.exists():
+            rmtree(pyr_path)
+        subprocess.run([sys.executable, "-m", "venv", pyr_path], check=True)
+        subprocess.run([python, "-m", "pip", "install", "basedpyright"], check=True)
+        update_version("basedpyright", _get_version(python))
+        return pyr_path
+
+    if verch is not None and verch.version == _get_version(python):
         if log:
-            print("pyright version checked and up to date!")
-        update_version("pyright", version)
-        return data_path / f"pyright-{version}"
+            print("basedpyright version checked and up to date!")
+        return pyr_path
 
-    dir = data_path / f"pyright-{version}"
-    if log:
-        print(f"Download pyright to {dir}…")
-
-    if verch is not None:
-        p = data_path / f"pyright-{verch.version}"
-        if p.exists():
-            rmtree(p)
-    if dir.exists():
-        rmtree(dir)
-
-    data = requests.get(tarball).content
-    tarfile.open(fileobj=BytesIO(data), mode="r").extractall(dir)
-    [subdir] = list(dir.iterdir())
-    for p in subdir.iterdir():
-        p.rename(dir / p.relative_to(subdir))
-    subdir.rmdir()
-
-    subprocess.run([sys.executable, "-m", "pip", "install", "docify"], check=True)
     subprocess.run(
-        [sys.executable, "build/py3_8/generate_docstubs.py"],
-        cwd=dir,
-        check=True,
+        [python, "-m", "pip", "install", "--upgrade", "basedpyright"], check=True
     )
-
-    subprocess.run(["npm", "ci"], cwd=dir, check=True)
-    subprocess.run(
-        ["npm", "run", "build"],
-        cwd=dir / "packages" / "pyright",
-        check=True,
-    )
-
-    update_version("pyright", version)
-
-    return dir
+    update_version("basedpyright", _get_version(python))
+    return pyr_path
 
 
 def get_pyright_path(log: bool):
     """Get the path of the pyright executable, optionally logging the LSP state."""
-    lsp = _get_dir(log) / "packages" / "pyright" / "langserver.index.js"
+    lsp = _get_dir(log) / "bin" / "basedpyright-langserver"
     assert lsp.exists()
     return lsp
