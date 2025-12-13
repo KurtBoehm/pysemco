@@ -11,7 +11,7 @@ from .tokens import (
 )
 
 
-def convert_params(pstr: str):
+def convert_params(pstr: str) -> Any:
     if pstr == "{}":
         return {}
     else:
@@ -20,14 +20,14 @@ def convert_params(pstr: str):
         return yaml.safe_load(f"{{{pstr}}}")
 
 
-def run_analyze(args: Namespace):
+def run_analyze(args: Namespace) -> None:
     import json
 
     root: Path = args.root_path.resolve()
     src: Path = args.in_path.resolve()
     dst: Path = args.out_path.resolve()
 
-    def save_tokens(txt: str | None = None):
+    def save_tokens(txt: str | None = None) -> None:
         if txt is None:
             with open(src, "r") as f:
                 txt = f.read()
@@ -35,6 +35,7 @@ def run_analyze(args: Namespace):
         tokens = compute_tokens_sync(args.language, root, src, txt, log_lsp=True)
         with open(dst, "w") as f:
             json.dump(tokens.json, f)
+        print("1")
 
     if dst.exists():
         with open(src, "r") as f:
@@ -43,11 +44,13 @@ def run_analyze(args: Namespace):
             tokens = SemanticTokens.from_json(json.load(f))
         if txt != tokens.txt:
             save_tokens(txt)
+        else:
+            print("0")
     else:
         save_tokens()
 
 
-def run_texify(args: Namespace):
+def run_texify(args: Namespace) -> None:
     import json
 
     with open(args.in_path, "r") as f:
@@ -57,7 +60,7 @@ def run_texify(args: Namespace):
     assert isinstance(params, dict)
     latex_lines = to_latex(SemanticTokens(tokens.txt, tokens.toks))
 
-    def apply_line_range(line_range: list[Any]):
+    def apply_line_range(line_range: list[Any]) -> list[str]:
         if len(line_range) == 2:
             begin, end = line_range
             if isinstance(begin, int) and isinstance(end, int):
@@ -84,7 +87,7 @@ def run_texify(args: Namespace):
     print(latex_line_merge(latex_lines))
 
 
-def run_texify_partial(args: Namespace):
+def run_texify_partial(args: Namespace) -> None:
     import json
 
     with open(args.in_path, "r") as f:
@@ -137,7 +140,7 @@ def run_texify_partial(args: Namespace):
     if len(singles := [t for t in tokens if len(t.full_toks) == 1]) > 0:
         tokens = singles
 
-    def latex(start: int, toks: list[SemanticToken]):
+    def latex(start: int, toks: list[SemanticToken]) -> str:
         toks = [
             SemanticToken(
                 line=0,
@@ -165,14 +168,14 @@ def run_texify_partial(args: Namespace):
     print(f"{out}%")
 
 
-def run_texify_minimal(args: Namespace):
+def run_texify_minimal(args: Namespace) -> None:
     with open(args.src, "r") as f:
         txt = f.read()
     (out,) = to_latex(SemanticTokens(txt, compute_minimal_tokens(args.language, txt)))
     print(f"{out}%")
 
 
-def run_texify_minimal_file(args: Namespace):
+def run_texify_minimal_file(args: Namespace) -> None:
     with open(args.src, "r") as f:
         txt = f.read()
     params = convert_params(args.params)
@@ -188,7 +191,7 @@ def run_texify_minimal_file(args: Namespace):
     print(latex_line_merge(latex_lines))
 
 
-def run():
+def run() -> None:
     parser = ArgumentParser(
         description="Run the pysemco tools, which can analyze source code "
         + "and convert it to LaTeX SemCo code."

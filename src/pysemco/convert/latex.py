@@ -84,5 +84,6 @@ def to_latex(tokens: SemanticTokens, space: bool = True) -> list[str]:
 def latex_line_merge(lines: list[str]) -> str:
     r"""Merge LaTeX lines using \\\\."""
     return "\n".join(
-        f"{l}\\\\" if i + 1 < len(lines) else f"{l}%" for i, l in enumerate(lines)
+        f"{line}\\\\" if i + 1 < len(lines) else f"{line}%"
+        for i, line in enumerate(lines)
     )

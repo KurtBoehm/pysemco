@@ -83,8 +83,6 @@
   \int_set:Nn#2{\l_tmpb_int-\l_tmpa_int}%
 }
 
-\cs_new:Nn\semco_quasitt:{\cs_if_exist:NTF\codefamily{\codefamily}{\ttfamily}}
-
 % Based on https://tex.stackexchange.com/a/62032
 \cs_new:Nn\env_query_raw:nN{\sys_get_shell:nnN{kpsewhich ~ --var-value ~ #1}{}#2}
 \cs_new:Nn\env_query_path:nN{%
@@ -95,6 +93,8 @@
   }%
 }
 \cs_new:Nn\env_query_path:N{\env_query_path:nN{TEXMF_OUTPUT_DIRECTORY}#1}
+
+\cs_new:Nn\semco_quasitt:{\cs_if_exist:NTF\codefamily{\codefamily}{\ttfamily}}
 
 \prop_new:N\g_semco_style_prop
 \prop_new:N\g_semco_styles_prop
@@ -228,17 +228,13 @@
   \prop_get:NnNTF\g_semco_style_prop{#1}\l_tmpa_tl{\l_tmpa_tl{#2}}{#2}%
 }
 
-\int_new:N\g_semco_tmp_cntr
 \iow_new:N\g_semco_code_iow
-\tl_new:N\g_semco_file_name
 \tl_new:N\g_semco_output_dir
+\tl_new:N\g_semco_hex_tl
 \tl_new:N\g_semco_vrb_path
-\tl_new:N\g_semco_key_tl
-\tl_new:N\g_semco_vrb_content
 \prop_new:N\g_semco_part_prop
 \prop_new:N\g_semco_mini_prop
 
-\cs_new:Nn\semco_tmp_name:{.semco/tmp-\int_use:N\g_semco_tmp_cntr.tex}
 \cs_new:Nn\semco_vrb_name:{vrb.tmp}
 
 \cs_generate_variant:Nn\str_replace_all:Nnn{Nnx}
@@ -270,6 +266,17 @@
 }{\semco_venv_init:}
 
 \sys_shell_now:n{echo ~ "*" ~ > ~ .semco/.gitignore}
+\sys_shell_now:n{touch ~ .semco/.cache}
+
+\NewDocumentCommand{\@semco@store@part@cache}{o m m m}{%
+  \prop_gput:Nee\g_semco_part_prop{{#1}{#2}{#3}}{#4}%
+}
+\NewDocumentCommand{\@semco@store@mini@cache}{m m m}{%
+  \prop_gput:Nee\g_semco_mini_prop{{#1}{#2}}{#3}%
+}
+\ExplSyntaxOff
+\input{.semco/.cache}
+\ExplSyntaxOn
 
 % Set \g_semco_vrb_path to the path of the VRB file
 \cs_new:Nn\semco_setup_vrb:{%
@@ -293,7 +300,15 @@
 % #3: root
 % #4: file name relative to root
 \NewDocumentCommand{\SemCoAnalyze}{m m m m}{%
-  \sys_shell_now:e{.semco/venv/bin/pysemco_tex ~ analyze ~ #1 ~ "#3" ~ "#3/#4" ~ ".semco/#2.json"}%
+  \sys_get_shell:enN{.semco/venv/bin/pysemco_tex ~ analyze ~ #1 ~ '#3' ~ '#3/#4' ~ '.semco/#2.json'}{}\g_tmpa_tl%
+  \tl_trim_spaces:N\g_tmpa_tl%
+  \tl_if_eq:NnTF\g_tmpa_tl{1}{%
+    \tl_show:n{clean ~ cache!}%
+    \sys_shell_now:n{rm ~ .semco/.cache}%
+    \sys_shell_now:n{touch ~ .semco/.cache}%
+    \prop_clear:N\g_semco_part_prop%
+    \prop_clear:N\g_semco_mini_prop%
+  }%
 }
 
 % #1: additional parameters
@@ -308,7 +323,12 @@
 % #3: part
 \NewDocumentCommand{\SemCoInputPart}{o m m}{%
   \semco_write_vrb:n{#3}%
-  \sys_get_shell:enN{.semco/venv/bin/pysemco_tex ~ texify_partial ~ \IfValueT{#1}{--index ~ #1} ~ '.semco/#2.json' ~ '\g_semco_vrb_path'}{}\g_tmpa_tl%
+  \file_get_hex_dump:nN{\semco_vrb_name:}\g_semco_hex_tl%
+  \prop_get:NxNF\g_semco_part_prop{{#1}{#2}{\g_semco_hex_tl}}\g_tmpa_tl{%
+    \sys_get_shell:enN{.semco/venv/bin/pysemco_tex ~ texify_partial ~ \IfValueT{#1}{--index ~ #1} ~ '.semco/#2.json' ~ '\g_semco_vrb_path'}{}\g_tmpa_tl%
+    \prop_gput:Nxx\g_semco_part_prop{{#1}{#2}{\g_semco_hex_tl}}{\g_tmpa_tl}%
+    \sys_shell_now:e{echo ~ '\string\@semco@store@part@cache\IfValueT{#1}{[#1]}{#2}{\g_semco_hex_tl}{\g_tmpa_tl}' ~ >> ~ .semco/.cache}%
+  }%
   \semco_clean_vrb:{}%
   \SemCoFormatInline{\tl_use:N\g_tmpa_tl}%
 }
@@ -317,7 +337,12 @@
 % #2: code
 \NewDocumentCommand{\SemCoMini}{m m}{%
   \semco_write_vrb:n{#2}%
-  \sys_get_shell:enN{.semco/venv/bin/pysemco_tex ~ texify_minimal ~ #1 ~ '\g_semco_vrb_path'}{}\g_tmpa_tl%
+  \file_get_hex_dump:nN{\semco_vrb_name:}\g_semco_hex_tl%
+  \prop_get:NxNF\g_semco_mini_prop{{#1}{\g_semco_hex_tl}}\g_tmpa_tl{%
+    \sys_get_shell:enN{.semco/venv/bin/pysemco_tex ~ texify_minimal ~ #1 ~ '\g_semco_vrb_path'}{}\g_tmpa_tl%
+    \prop_gput:Nxx\g_semco_mini_prop{{#1}{\g_semco_hex_tl}}{\g_tmpa_tl}%
+    \sys_shell_now:e{echo ~ '\string\@semco@store@mini@cache{#1}{\g_semco_hex_tl}{\g_tmpa_tl}' ~ >> ~ .semco/.cache}%
+  }%
   \semco_clean_vrb:{}%
   \SemCoFormatInline{\tl_use:N\g_tmpa_tl}%
 }
