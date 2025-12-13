@@ -1,7 +1,7 @@
 \RequirePackage{l3keys2e}
 \ProvidesExplPackage{demo/SemanticCode}{2024-08-20}{1.1}{Semantic code analysis and typesetting.}
 \RequirePackage{fancyvrb}
-\RequirePackage{xcolor-material}
+\RequirePackage{xcolor}
 
 % Unix time
 
@@ -94,41 +94,66 @@
 }
 \cs_new:Nn\env_query_path:N{\env_query_path:nN{TEXMF_OUTPUT_DIRECTORY}#1}
 
+\definecolor{PictaGreyMedium}{HTML}{6e7781}
+\definecolor{PictaGreyLight}{HTML}{8b949e}
+\definecolor{PictaRedMedium}{HTML}{ce2233}
+\definecolor{PictaRedLight}{HTML}{ff7a80}
+\definecolor{PictaOrangeMedium}{HTML}{d76500}
+\definecolor{PictaOrangeLight}{HTML}{ff9566}
+\definecolor{PictaYellowMedium}{HTML}{bc8700}
+\definecolor{PictaYellowLight}{HTML}{ffc960}
+\definecolor{PictaOliveMedium}{HTML}{7c8200}
+\definecolor{PictaOliveLight}{HTML}{c6ce59}
+\definecolor{PictaGreenMedium}{HTML}{22893a}
+\definecolor{PictaGreenLight}{HTML}{56da70}
+\definecolor{PictaCyanMedium}{HTML}{00899b}
+\definecolor{PictaCyanLight}{HTML}{50d4cf}
+\definecolor{PictaBlueDark}{HTML}{0a3069}
+\definecolor{PictaBlueMedium}{HTML}{0052ac}
+\definecolor{PictaBlueLight}{HTML}{75bfff}
+\definecolor{PictaBlueVeryLight}{HTML}{a5d6ff}
+\definecolor{PictaIndigoMedium}{HTML}{633ac1}
+\definecolor{PictaIndigoLight}{HTML}{c1b1ff}
+\definecolor{PictaPurpleMedium}{HTML}{ab44c5}
+\definecolor{PictaPurpleLight}{HTML}{e8a1ff}
+\definecolor{PictaPinkMedium}{HTML}{d33887}
+\definecolor{PictaPinkLight}{HTML}{ff9ec5}
+
 \cs_new:Nn\semco_quasitt:{\cs_if_exist:NTF\codefamily{\codefamily}{\ttfamily}}
 
 \prop_new:N\g_semco_style_prop
 \prop_new:N\g_semco_styles_prop
 
-\cs_new:Nn\semco_colorful_function:n{\textcolor{GoogleGreen!50!MaterialGreen800}{#1}}
-\cs_new:Nn\semco_colorful_keyword:n{\textcolor{GoogleRed}{#1}}
-\cs_new:Nn\semco_colorful_literal:n{\textcolor{MaterialBlue900}{#1}}
+\cs_new:Nn\semco_colorful_function:n{\textcolor{PictaGreenMedium}{#1}}
+\cs_new:Nn\semco_colorful_keyword:n{\textcolor{PictaRedMedium}{#1}}
+\cs_new:Nn\semco_colorful_constant:n{\textcolor{PictaBlueMedium}{#1}}
 \cs_new:Nn\semco_colorful_member:n{\textit{#1}}
-\cs_new:Nn\semco_colorful_type:n{\textcolor{MaterialDeepPurple}{#1}}
-\cs_new:Nn\semco_colorful_variable:n{\textcolor{MaterialOrange800}{#1}}
+\cs_new:Nn\semco_colorful_type:n{\textcolor{PictaIndigoMedium}{#1}}
+\cs_new:Nn\semco_colorful_variable:n{\textcolor{PictaOrangeMedium}{#1}}
 
-\cs_new:Nn\semco_colorful_attr:n{\textcolor{MaterialBlue700}{#1}}
+\cs_new:Nn\semco_colorful_attr:n{\textcolor{PictaBlueMedium}{#1}}
 \cs_new:Nn\semco_colorful_blt_var:n{\semco_colorful_variable:n{#1}}
 \cs_new:Nn\semco_colorful_cls:n{\semco_colorful_type:n{#1}}
-\cs_new:Nn\semco_colorful_com:n{\textcolor{MaterialGrey600}{#1}}
-\cs_new:Nn\semco_colorful_cnc:n{\textcolor{MaterialIndigo}{#1}}
-\cs_new:Nn\semco_colorful_dec:n{\textcolor{MaterialBlue700}{#1}}
-\cs_new:Nn\semco_colorful_enm:n{\semco_colorful_literal:n{#1}}
+\cs_new:Nn\semco_colorful_com:n{\textcolor{PictaGreyMedium}{#1}}
+\cs_new:Nn\semco_colorful_cnc:n{\textcolor{PictaPurpleMedium}{#1}}
+\cs_new:Nn\semco_colorful_dec:n{\textcolor{PictaBlueMedium}{#1}}
+\cs_new:Nn\semco_colorful_enm:n{\semco_colorful_constant:n{#1}}
 \cs_new:Nn\semco_colorful_enu:n{\semco_colorful_type:n{#1}}
 \cs_new:Nn\semco_colorful_fun:n{\semco_colorful_function:n{#1}}
 \cs_new:Nn\semco_colorful_kwd:n{\semco_colorful_keyword:n{#1}}
-\cs_new:Nn\semco_colorful_kwd_val:n{\semco_colorful_keyword:n{\semco_colorful_literal:n{#1}}}
+\cs_new:Nn\semco_colorful_kwd_val:n{\semco_colorful_keyword:n{\semco_colorful_constant:n{#1}}}
 \cs_new:Nn\semco_colorful_kwd_fun:n{\semco_colorful_keyword:n{\semco_colorful_function:n{#1}}}
 \cs_new:Nn\semco_colorful_kwd_typ:n{\semco_colorful_keyword:n{\semco_colorful_type:n{#1}}}
-\cs_new:Nn\semco_colorful_lab:n{\textcolor{MaterialBlue700}{#1}}
-\cs_new:Nn\semco_colorful_lit_aff:n{\textcolor{GoogleRed}{#1}}
-\cs_new:Nn\semco_colorful_lit_chr:n{\semco_colorful_literal:n{#1}}
-\cs_new:Nn\semco_colorful_lit_flt:n{\semco_colorful_literal:n{#1}}
-\cs_new:Nn\semco_colorful_lit_inc:n{\semco_colorful_literal:n{#1}}
-\cs_new:Nn\semco_colorful_lit_int:n{\semco_colorful_literal:n{#1}}
-\cs_new:Nn\semco_colorful_lit_str:n{\semco_colorful_literal:n{#1}}
-\cs_new:Nn\semco_colorful_mac:n{\textcolor{MaterialBlue700}{#1}}
+\cs_new:Nn\semco_colorful_lab:n{\textcolor{PictaBlueMedium}{#1}}
+\cs_new:Nn\semco_colorful_lit_aff:n{\textcolor{PictaRedMedium}{#1}}
+\cs_new:Nn\semco_colorful_lit_chr:n{\semco_colorful_constant:n{#1}}
+\cs_new:Nn\semco_colorful_lit_flt:n{\semco_colorful_constant:n{#1}}
+\cs_new:Nn\semco_colorful_lit_inc:n{\semco_colorful_constant:n{#1}}
+\cs_new:Nn\semco_colorful_lit_int:n{\semco_colorful_constant:n{#1}}
+\cs_new:Nn\semco_colorful_lit_str:n{\textcolor{PictaBlueDark}{#1}}
+\cs_new:Nn\semco_colorful_mac:n{\textcolor{PictaBlueMedium}{#1}}
 \cs_new:Nn\semco_colorful_mtd:n{\semco_colorful_member:n{\semco_colorful_function:n{#1}}}
-\cs_new:Nn\semco_colorful_nms:n{\textcolor{MaterialPink}{#1}}
+\cs_new:Nn\semco_colorful_nms:n{\textcolor{PictaPinkMedium}{#1}}
 \cs_new:Nn\semco_colorful_par:n{\textbf{\semco_colorful_variable:n{#1}}}
 \cs_new:Nn\semco_colorful_pre:n{\semco_colorful_keyword:n{#1}}
 \cs_new:Nn\semco_colorful_pro:n{\semco_colorful_member:n{\semco_colorful_variable:n{#1}}}
@@ -137,7 +162,7 @@
 \cs_new:Nn\semco_colorful_var:n{\semco_colorful_variable:n{#1}}
 
 \cs_new:Nn\semco_bw_mem:n{\textit{#1}}
-\cs_new:Nn\semco_bw_com:n{\textcolor{MaterialGrey600}{#1}}
+\cs_new:Nn\semco_bw_com:n{\textcolor{gray}{#1}}
 \cs_new:Nn\semco_bw_kwd:n{\textbf{#1}}
 
 \cs_new:Nn\semco_style_colorful:{
@@ -303,7 +328,7 @@
   \sys_get_shell:enN{.semco/venv/bin/pysemco_tex ~ analyze ~ #1 ~ '#3' ~ '#3/#4' ~ '.semco/#2.json'}{}\g_tmpa_tl%
   \tl_trim_spaces:N\g_tmpa_tl%
   \tl_if_eq:NnTF\g_tmpa_tl{1}{%
-    \tl_show:n{clean ~ cache!}%
+    % clean cache
     \sys_shell_now:n{rm ~ .semco/.cache}%
     \sys_shell_now:n{touch ~ .semco/.cache}%
     \prop_clear:N\g_semco_part_prop%
