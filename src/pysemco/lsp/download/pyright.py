@@ -24,7 +24,7 @@ def _get_dir(log: bool):
     verch = version_check("basedpyright")
     if verch is not None and not verch.check:
         if log:
-            print("basedpyright is up to date!")
+            print("basedpyright is up to date!", file=sys.stderr)
         return pyr_path
 
     python = pyr_path / "bin" / "python3"
@@ -38,7 +38,7 @@ def _get_dir(log: bool):
 
     if verch is not None and verch.version == _get_version(python):
         if log:
-            print("basedpyright version checked and up to date!")
+            print("basedpyright version checked and up to date!", file=sys.stderr)
         return pyr_path
 
     subprocess.run(

@@ -1,3 +1,4 @@
+import sys
 import zipfile
 from io import BytesIO
 from pathlib import Path
@@ -13,21 +14,21 @@ def _get_dir(log: bool) -> Path:
     verch = version_check("clangd")
     if verch is not None and not verch.check:
         if log:
-            print("clangd is up to date!")
+            print("clangd is up to date!", file=sys.stderr)
         return data_path / f"clangd-{verch.version}"
 
     clangd = github().get_repo("clangd/clangd")
     release = clangd.get_latest_release()
-    version = release.title
+    version = release.name
     if verch is not None and verch.version == version:
         if log:
-            print("clangd version checked and up to date!")
+            print("clangd version checked and up to date!", file=sys.stderr)
         update_version("clangd", version)
         return data_path / f"clangd-{version}"
 
     dir = data_path / f"clangd-{version}"
     if log:
-        print(f"Download clangd to {dir}…")
+        print(f"Download clangd to {dir}…", file=sys.stderr)
 
     if verch is not None:
         rmtree(data_path / f"clangd-{verch.version}")
