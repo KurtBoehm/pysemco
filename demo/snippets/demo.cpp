@@ -21,5 +21,6 @@ int main(int argc, const char** argv) {
   uint8_t* data = new (std::align_val_t(64)) uint8_t[64];
   Abc abc{.a = 0, .b = 32, .c = "abc"};
   std::print("{}: {}\n", argv[0], argc);
+  int* p = nullptr;
   return EXIT_SUCCESS;
 }

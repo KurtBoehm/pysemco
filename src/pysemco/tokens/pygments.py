@@ -138,13 +138,13 @@ class CppLexer(_CppLexer):
         "wchar_t": token.Keyword.Type,
         "false": token.Keyword.Constant,
         "true": token.Keyword.Constant,
-        "nullptr": token.Keyword.Constant,
         "this": token.Keyword.Constant,
         "operator": token.Keyword.Operator,
     }
     _builtin_kinds: Final = {
         "false": token.Keyword.Constant,
         "true": token.Keyword.Constant,
+        "nullptr": token.Keyword.Constant,
         "NULL": token.Name.Macro,
     }
 
