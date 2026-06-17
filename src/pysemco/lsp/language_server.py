@@ -1,5 +1,5 @@
 import logging
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path, PurePath
 
@@ -15,7 +15,7 @@ class LanguageServer(_LanguageServer):
         self,
         relative_file_path: str,
         contents: str | None = None,
-    ) -> Iterator[None]:
+    ) -> Generator[None]:
         """
         Open a file in the Language Server.
         This is required before making any requests to the Language Server.

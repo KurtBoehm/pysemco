@@ -1,3 +1,4 @@
+import platform
 import sys
 import zipfile
 from io import BytesIO
@@ -7,6 +8,19 @@ from shutil import rmtree
 import requests
 
 from pysemco.lsp.download.defs import data_path, github, update_version, version_check
+
+
+def _system_prefix() -> str:
+    system = platform.system()
+    if system == "Linux":
+        prefix = "clangd-linux-"
+    elif system == "Darwin":
+        prefix = "clangd-mac-"
+    elif system == "Windows":
+        prefix = "clangd-windows-"
+    else:
+        raise RuntimeError(f"Unsupported OS: {system}")
+    return prefix
 
 
 def _get_dir(log: bool) -> Path:
@@ -36,7 +50,8 @@ def _get_dir(log: bool) -> Path:
         rmtree(dir)
 
     assets = release.assets
-    [asset] = [asset for asset in assets if asset.name.startswith("clangd-linux-")]
+    system_prefix = _system_prefix()
+    [asset] = [asset for asset in assets if asset.name.startswith(system_prefix)]
     data = requests.get(asset.browser_download_url).content
 
     zip = zipfile.ZipFile(BytesIO(data))

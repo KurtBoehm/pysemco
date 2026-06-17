@@ -1,11 +1,13 @@
 import json
 import logging
 import os
-from collections.abc import AsyncIterator
+import shlex
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from importlib.resources import files
 from pathlib import Path
 
+import psutil
 from multilspy.language_server import Language
 from multilspy.lsp_protocol_handler.lsp_types import InitializeParams, InitializeResult
 from multilspy.lsp_protocol_handler.server import ProcessLaunchInfo
@@ -33,7 +35,7 @@ class PyrightServer(LanguageServer):
             MultilspyConfig(Language.PYTHON, trace_lsp_communication),
             logger,
             str(root),
-            ProcessLaunchInfo(cmd=f"{pyright_cmd} --stdio"),
+            ProcessLaunchInfo(cmd=f"{shlex.quote(str(pyright_cmd))} --stdio"),
             "python",
         )
         self.init_response: InitializeResult | None = None
@@ -53,7 +55,7 @@ class PyrightServer(LanguageServer):
         return d
 
     @asynccontextmanager
-    async def start_server(self) -> AsyncIterator["PyrightServer"]:
+    async def start_server(self) -> AsyncGenerator["PyrightServer"]:
         async def execute_client_command(params):
             return []
 
@@ -89,5 +91,19 @@ class PyrightServer(LanguageServer):
 
             yield self
 
-            await self.server.shutdown()
-            await self.server.stop()
+            # Best-effort shutdown; if the process already exited, ignore it.
+            try:
+                await self.server.shutdown()
+            except Exception as exc:
+                self.logger.log(f"Error during LSP shutdown: {exc}", logging.WARNING)
+            try:
+                await self.server.stop()
+            except psutil.NoSuchProcess:
+                # Process is already gone; nothing left to clean up.
+                self.logger.log(
+                    "LSP process already exited before stop(); ignoring.", logging.INFO
+                )
+            except Exception as exc:
+                self.logger.log(
+                    f"Error while stopping LSP server: {exc}", logging.WARNING
+                )
